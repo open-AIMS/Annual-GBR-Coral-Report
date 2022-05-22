@@ -87,42 +87,10 @@ manta.sum %>% dplyr::select(REEF_NAME, REPORT_YEAR, Cover) %>%
     head
 ## ----end
 
-
-if(1==2) {  ## Everything in this function has already been completed above.
-###############################################################
-    ## Include only those reefs that have had more than 4 visits ##
-###############################################################
-    ## The following has the effect of preventing new reefs from contributing,
-    ## Lets run without it
-                                        #wch <- table(manta.sum$REEF_NAME)
-                                        #wch<-names(wch[wch>4])
-                                        #manta.sum = manta.sum %>% filter(REEF_NAME %in% wch)
-
-
-##########################################
-    ## Put the reefs into Locations (Zones) ##
-##########################################
-    ## Note, this changed in 2020, as LTMP now survey further north - so the northern limit has extended
-    manta.sum = manta.sum %>% mutate(Location=CoralTrends_calc3ZoneLocations(Latitude))
-
-##############################################################################
-    ## De'ath 2012 excluded some reefs that were outside the latitudinal ranges ##
-    ## The following code excludes reefs outside the domain (if there are       ##
-    ## any...).  We have extended the domain a little, so that no reefs         ##
-    ## are now excluded.                                                        ##
-##############################################################################
-    as.character(unique(filter(manta.sum, Location=='Outside')$REEF_NAME))
-    ## Reefs exclude (Outside)
-    exc=manta.sum %>% filter(Location=='Outside')
-    manta.sum = manta.sum %>% filter(Location!='Outside') %>% droplevels %>% mutate(Zone=factor(Location, levels=c('Northern','Central','Southern')))
-    ## number of reefs used
-    length(unique(manta.sum$REEF_NAME))
-    ## number of reef surveys
-    nrow(manta.sum)
-}
-
+## ---- Save processed data
 writeLines(paste0("NumberOfReefs=",length(unique(manta.sum$REEF_NAME)),
                   "\nNumberOfSurveys=",nrow(manta.sum)),
            con='../data/processed/Manta.properties')
 save(manta.sum, file='../data/processed/manta.sum.RData')
 save(manta.tow, file='../data/processed/manta.tow.RData')
+## ---- end
