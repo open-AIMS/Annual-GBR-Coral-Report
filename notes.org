@@ -1,0 +1,6 @@
+* Notes
+  - annual change over 2 years.  
+	2019 = year 2
+	next most recent is year 1
+	expressed as annual change
+	cap at 2 years
