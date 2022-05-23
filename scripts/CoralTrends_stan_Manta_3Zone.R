@@ -11,7 +11,8 @@ load('../data/processed/manta.tow.RData')
 all.reefs = manta.sum %>%
     dplyr:::select(P_CODE.mod,REEF_NAME,REEF_ID,Latitude,Longitude) %>%
     group_by(REEF_NAME,REEF_ID) %>%
-    summarize_at(vars(Latitude,Longitude), funs(mean)) %>%
+    ## summarize_at(vars(Latitude,Longitude), funs(mean)) %>%
+    summarize(across(c(Latitude,Longitude), mean)) %>%
     as.data.frame
 write.csv(all.reefs,file='../data/all.reefs_3Zone.csv', quote=FALSE, row.names=FALSE)
 
@@ -28,7 +29,11 @@ dat.all = manta.sum %>%
 ##original, stan_glmer beta, INLA_tow beta scaled, INLA_reef binomial, INLA_reef beta
 ##BRMS beta vanilla, BRMS beta disp, MGCV beta , MGCV ordinal, CLMM, BRMS_reef beta,
 ##
-models <- c('BRMS beta vanilla', 'BRMS beta disp', 'glmmTMB beta vanilla', 'glmmTMB beta disp', 'BRMS ordinal')
+models <- c('BRMS beta vanilla',
+            'BRMS beta disp',
+            'glmmTMB beta vanilla',
+            'glmmTMB beta disp',
+            'BRMS ordinal')
 ## Fit stan models===================================================================
 
 ## GBR
@@ -175,7 +180,7 @@ if ("INLA_tow beta scaled" %in% models) {
     gc()
 ## ----end
 ## ---- GBR.INLA.tow.beta (REEF_YEAR)
-if ("INLA_tow beta scaled" %in% models) {
+if ("INLA_tow beta" %in% models) {
     dat.inla <- dataINLA(dat=manta.tow %>% droplevels,
                          level='tow')
     dat = dat.inla[['dat.1']]
