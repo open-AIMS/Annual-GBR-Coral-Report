@@ -28,6 +28,7 @@ CoralTrends_checkPackages <- function() {
     require(INLA)
     require(emmeans)
     library(mgcv)
+    require(betareg)
 }
 
 ######################################################################
