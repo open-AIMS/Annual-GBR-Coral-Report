@@ -1,4 +1,13 @@
-* Notes
+Notes
+
+* 2022 (the 2021 update)
+- all scripts up to CoralTrends_summary_figures.R were run on the HPC
+  - ssh mlogan@hpc-l001.aims.gov.au
+  - cd Work/AIMS/Annual GBR Coral Report/scripts
+  - models were then scp back to my local machine and the figures created locally
+  - this was because PNG not supported on the HPC R
+- Using glmmTMB.beta.disp, inla.beta.disp, brm.beta.disp
+* older notes
   - annual change over 2 years.  
 	2019 = year 2
 	next most recent is year 1

@@ -44,6 +44,18 @@ load(file='../data/modelled/mod.southern_inla.beta.disp.RData') #
 dat.southern_inla.beta.disp <- dat.southern_inla.beta.disp %>%
     rename(response = mean)
 
+## INLA tow, beta ry disp
+load(file='../data/modelled/mod.northern_inla.beta.ry.disp.RData') #
+dat.northern_inla.beta.ry.disp <- dat.northern_inla.beta.ry.disp %>%
+    rename(response = mean)
+load(file='../data/modelled/mod.central_inla.beta.ry.disp.RData')  #
+dat.central_inla.beta.ry.disp <- dat.central_inla.beta.ry.disp %>%
+    rename(response = mean)
+load(file='../data/modelled/mod.southern_inla.beta.ry.disp.RData') #
+dat.southern_inla.beta.ry.disp <- dat.southern_inla.beta.ry.disp %>%
+    rename(response = mean)
+
+
 ## glmmTMB tow, beta
 ## load(file='../data/modelled/mod.northern_glmmTMB.beta.RData') #
 ## load(file='../data/modelled/mod.central_glmmTMB.beta.RData')  #
@@ -54,6 +66,12 @@ dat.southern_inla.beta.disp <- dat.southern_inla.beta.disp %>%
 load(file='../data/modelled/mod.northern_glmmTMB.beta.disp.RData') #
 load(file='../data/modelled/mod.central_glmmTMB.beta.disp.RData')  #
 load(file='../data/modelled/mod.southern_glmmTMB.beta.disp.RData') #
+
+## glmmTMB tow, beta ry disp
+## load(file='../data/modelled/mod.gbr_glmmTMB.beta.ry.disp.RData') #
+load(file='../data/modelled/mod.northern_glmmTMB.beta.ry.disp.RData') #
+load(file='../data/modelled/mod.central_glmmTMB.beta.ry.disp.RData')  #
+load(file='../data/modelled/mod.southern_glmmTMB.beta.ry.disp.RData') #
 
 ## BRMS tow, beta disp
 load(file='../data/modelled/mod.northern_brms.beta.disp.RData')
@@ -434,22 +452,24 @@ if (same_y_axis_range) {
     d <- sym(paste0('dat.northern_', model_source)) %>% eval() %>%
         bind_rows(sym(paste0('dat.central_', model_source)) %>% eval()) %>%
         bind_rows(sym(paste0('dat.southern_', model_source)) %>% eval()) %>%
+        rename(any_of(c(lower.CL = "lower", upper.CL = "upper"))) %>%
         summarise(y_range_min = min(lower.CL),
-                y_range_max = max(upper.CL))
+                  y_range_max = max(upper.CL))
 }
 ## can also invoke region='GBR' - but only for glmmTMB.beta.disp
-for (region in c('GBR','Northern GBR', 'Central GBR', 'Southern GBR')) {
+## for (region in c('GBR','Northern GBR', 'Central GBR', 'Southern GBR')) {
+for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
     ## ---- prepareData
     nd1 <- nd %>% filter(Region==region)
     ## if (region=='GBR') nd1 <- manta.tow %>% summarise(Year=mean(range(as.numeric(as.character(Year)))),
     ##                                                   N=paste0('N=', length(unique(REEF_NAME))))
     reg <- dplyr::case_when(
-                      region == 'GBR' ~ 'dat.gbr',
+                      ## region == 'GBR' ~ 'dat.gbr',
                       region == 'Northern GBR' ~ 'dat.northern',
                       region == 'Central GBR' ~'dat.central',
                       region == 'Southern GBR' ~ 'dat.southern')
     reg.shp <- dplyr::case_when(
-                          region == 'GBR' ~ 'whagbr',
+                          ## region == 'GBR' ~ 'whagbr',
                           region == 'Northern GBR' ~ 'whagbr.n',
                           region == 'Central GBR' ~ 'whagbr.c',
                           region == 'Southern GBR' ~ 'whagbr.s'
@@ -593,8 +613,11 @@ mods <- tribble(
     'glmmTMB.reef.beta',        'glmmTMB Beta (Reef level)',       '',        'solid',
     'glmmTMB.reef.beta.disp',   'glmmTMB Beta disp (Reef level)',  '',        'solid',
     'inla.beta',                'INLA Beta (Tow level)',           '',        'solid',
+    'inla.beta.disp',           'INLA Beta disp (Tow level)',      '',        'solid',
+    'inla.beta.ry.disp',        'INLA Beta ry disp (Tow level)',      '',        'solid',
     'glmmTMB.beta',             'glmmTMB Beta (Tow level)',        '',        'solid',
     'glmmTMB.beta.disp',        'glmmTMB Beta disp (Tow level)',   '#000000', 'solid',
+    'glmmTMB.beta.ry.disp',        'glmmTMB Beta ry disp (Tow level)',   '#000000', 'solid',
     'brms.beta.disp',           'BRMS Beta disp (Tow level)',      '',        'solid',
     'brms.cumulative',          'BRMS Cumulative (Tow level)',     '',        'solid',
     NA,                       'Raw Means',                         '',        'dashed',
@@ -604,6 +627,7 @@ mods <- tribble(
 newdata <- vector('list', nrow(mods %>% filter(!is.na(model_source))))
 for (m in 1:nrow(mods %>% filter(!is.na(model_source)))) {
     print(mods$model_source[m])
+    if (!exists(sym(paste0('dat.northern_', mods$model_source[m])))) next
     d.n <- sym(paste0('dat.northern_', mods$model_source[m]))
     d.c <- sym(paste0('dat.central_', mods$model_source[m]))
     d.s <- sym(paste0('dat.southern_', mods$model_source[m]))
@@ -624,65 +648,185 @@ newdata = newdata %>%
     rbind( manta.stats.reef %>% mutate(Name='Raw Means', lower=NA, upper=NA) %>% dplyr::select(Name,Region,Year,response=Mean,lower,upper)) %>%
     rbind( manta.stats.tow.beta %>% mutate(Name='Raw Beta means', lower=NA, upper=NA) %>% dplyr::select(Name,Region,Year,response=Mean,lower,upper)) 
 
-whichModels <- c(
-    'Raw Means',
-    'Original (Reef level)',
-    ## 'INLA Beta (Reef level)',
-    ## 'INLA Beta scaled (Reef level)',
-    'glmmTMB Beta (Reef level)',
-    ##'glmmTMB Beta disp (Reef level)',
-    'INLA Beta (Tow level)',
-    ## 'glmmTMB Beta (Tow level)',
-    'glmmTMB Beta disp (Tow level)',
-    'BRMS Beta disp (Tow level)',
-    'BRMS Cumulative (Tow level)'
-    ## 'Raw Beta means'
+## ---- Beta disp
+{
+    whichModels <- c(
+        #'Raw Means',
+        ##'Original (Reef level)',
+#### 'INLA Beta (Reef level)',
+#### 'INLA Beta scaled (Reef level)',
+        #'glmmTMB Beta (Reef level)',
+        ##'glmmTMB Beta disp (Reef level)',
+        'INLA Beta disp (Tow level)',
+        ## 'INLA Beta ry disp (Tow level)',
+        ## 'glmmTMB Beta (Tow level)',
+        'glmmTMB Beta disp (Tow level)',
+        ## 'glmmTMB Beta ry disp (Tow level)',
+        'BRMS Beta disp (Tow level)'#,
+        #'BRMS Cumulative (Tow level)'
+        ## 'Raw Beta means'
     )
 
-mods.used = mods %>% filter(name %in% whichModels) %>%
-    mutate(N=1:n(),
-           color=ifelse(color=='#000000', '#000000',
-                        RColorBrewer::brewer.pal(max(N), 'Set1')[N]),
-           fill=ifelse(color=='#000000','#000000',NA)
-           ) %>%
-    mutate(name=factor(name, levels=whichModels)) %>%
-    arrange(name)
+    mods.used = mods %>% filter(name %in% whichModels) %>%
+        mutate(N=1:n(),
+               color=ifelse(color=='#000000', '#000000',
+                            RColorBrewer::brewer.pal(max(N), 'Set1')[N]),
+               fill=ifelse(color=='#000000','#000000',NA)
+               ) %>%
+        mutate(name=factor(name, levels=whichModels)) %>%
+        arrange(name)
 
-g1 <- newdata %>%
-    filter(Name %in% whichModels) %>%
-    mutate(Name = factor(Name, levels=whichModels)) %>%
-    ggplot() +
-    geom_ribbon(aes(y=response, ymin=lower, ymax=upper, x=as.numeric(as.character(Year)), fill=Name), alpha=0.1) +
-    geom_ribbon(data=newdata %>% filter(Name == 'glmmTMB Beta disp (Tow level)'),
-                aes(y=response, ymin=lower, ymax=upper, x=as.numeric(as.character(Year))), alpha=0.1) +
-    geom_line(aes(y=response, x=as.numeric(as.character(Year)), color=Name, linetype=Name)) +
-    geom_line(data=newdata %>% filter(Name == 'glmmTMB Beta disp (Tow level)'),
-              aes(y=response, x=as.numeric(as.character(Year))), color='#000000') +
-    ## geom_ribbon(data=newdata %>% filter(Name == 'Original (Reef level)'),
-    ##             aes(y=response, ymin=lower, ymax=upper, x=as.numeric(as.character(Year))), alpha=0.2) +
-    ## facet_wrap(~Region, nrow=3) +
-    facet_wrap(~Region, nrow=1) +
-    ## scale_color_manual('Model', values=c('yellow','orange','black','blue','red')) +
-    scale_color_manual('Models', values=mods.used %>% pull(color)) +
-    scale_linetype_manual('Models', values=mods.used %>% pull(linetype)) +
-    scale_fill_manual('Models', values=mods.used %>% pull(fill)) +
-    scale_x_continuous('') +
-    scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
-    theme_bw() +
-    ## theme(legend.position='bottom',
-    ##       legend.background = element_rect(fill='#00000020'),
-    ##       legend.key=element_rect(fill='#00000000')) +
-    theme(legend.position='bottom') +
-    guides(colour = guide_legend(title.position = "top", override.aes = list(fill=c(NA,NA,NA,NA,'#000000',NA,NA))))
-    ## theme(legend.key=element_rect(fill=c(NA,'red'))) +
-    ## guides(colour = guide_legend(title.position = "top", legend.key=element_rect(color=c(NA,'red'))))
-g1
+    g1 <- newdata %>%
+        filter(Name %in% whichModels) %>%
+        mutate(Name = factor(Name, levels=whichModels)) %>%
+        ggplot() +
+        geom_line(aes(y = response, x = as.numeric(as.character(Year)), colour = Name), alpha=1) +
+        geom_ribbon(aes(y = response, ymin = lower, ymax = upper,
+                        x = as.numeric(as.character(Year)),
+                        fill = Name),
+                    alpha=0.3) +
+        facet_wrap(~Region, nrow=1) +
+        ## scale_color_manual('Models', values=mods.used %>% pull(color)) +
+        ## scale_linetype_manual('Models', values=mods.used %>% pull(linetype)) +
+        ## scale_fill_manual('Models', values=mods.used %>% pull(fill)) +
+        scale_x_continuous('') +
+        scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
+        theme_bw() +
+        ## theme(legend.position='bottom',
+        ##       legend.background = element_rect(fill='#00000020'),
+        ##       legend.key=element_rect(fill='#00000000')) +
+        theme(legend.position='bottom')+
+        guides(colour = guide_legend(title = 'Model'),
+               fill = guide_legend(title = 'Model'))
+    ## guides(colour = guide_legend(title.position = "top", override.aes = list(fill=c(NA,NA,NA,NA,'#000000',NA,NA))))
+    g1
 
-ggsave(file='../output/figures/ComparisonFigure.pdf', g1, width=9, height=3.5)
-ggsave(file='../output/figures/ComparisonFigure.png', g1, width=9, height=3.5, dpi=300)
+    ggsave(file='../output/figures/ComparisonFigure_beta.disp.pdf', g1, width=9, height=3.5)
+    ggsave(file='../output/figures/ComparisonFigure_beta.disp.png', g1, width=9, height=3.5, dpi=300)
+}
+## ----end
+## ---- Beta ry disp
+{
+    whichModels <- c(
+        #'Raw Means',
+        ##'Original (Reef level)',
+#### 'INLA Beta (Reef level)',
+#### 'INLA Beta scaled (Reef level)',
+        #'glmmTMB Beta (Reef level)',
+        ##'glmmTMB Beta disp (Reef level)',
+        ## 'INLA Beta disp (Tow level)',
+        'INLA Beta ry disp (Tow level)',
+        ## 'glmmTMB Beta (Tow level)',
+        ## 'glmmTMB Beta disp (Tow level)',
+        'glmmTMB Beta ry disp (Tow level)'#,
+        ## 'BRMS Beta disp (Tow level)'#,
+        ## 'BRMS Beta ry disp (Tow level)'#,
+        #'BRMS Cumulative (Tow level)'
+        ## 'Raw Beta means'
+    )
+
+    mods.used = mods %>% filter(name %in% whichModels) %>%
+        mutate(N=1:n(),
+               color=ifelse(color=='#000000', '#000000',
+                            RColorBrewer::brewer.pal(max(N), 'Set1')[N]),
+               fill=ifelse(color=='#000000','#000000',NA)
+               ) %>%
+        mutate(name=factor(name, levels=whichModels)) %>%
+        arrange(name)
+
+    g1 <- newdata %>%
+        filter(Name %in% whichModels) %>%
+        mutate(Name = factor(Name, levels=whichModels)) %>%
+        ggplot() +
+        geom_line(aes(y = response, x = as.numeric(as.character(Year)), colour = Name), alpha=1) +
+        geom_ribbon(aes(y = response, ymin = lower, ymax = upper,
+                        x = as.numeric(as.character(Year)),
+                        fill = Name),
+                    alpha=0.3) +
+        facet_wrap(~Region, nrow=1) +
+        ## scale_color_manual('Models', values=mods.used %>% pull(color)) +
+        ## scale_linetype_manual('Models', values=mods.used %>% pull(linetype)) +
+        ## scale_fill_manual('Models', values=mods.used %>% pull(fill)) +
+        scale_x_continuous('') +
+        scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
+        theme_bw() +
+        ## theme(legend.position='bottom',
+        ##       legend.background = element_rect(fill='#00000020'),
+        ##       legend.key=element_rect(fill='#00000000')) +
+        theme(legend.position='bottom')+
+        guides(colour = guide_legend(title = 'Model'),
+               fill = guide_legend(title = 'Model'))
+    ## guides(colour = guide_legend(title.position = "top", override.aes = list(fill=c(NA,NA,NA,NA,'#000000',NA,NA))))
+    g1
+
+    ggsave(file='../output/figures/ComparisonFigure_beta.ry.disp.pdf', g1, width=9, height=3.5)
+    ggsave(file='../output/figures/ComparisonFigure_beta.ry.disp.png', g1, width=9, height=3.5, dpi=300)
+}
+## ----end
+## ---- Beta disp vs Beta ry disp
+{
+    whichModels <- c(
+        #'Raw Means',
+        ##'Original (Reef level)',
+#### 'INLA Beta (Reef level)',
+#### 'INLA Beta scaled (Reef level)',
+        #'glmmTMB Beta (Reef level)',
+        ##'glmmTMB Beta disp (Reef level)',
+        'INLA Beta disp (Tow level)',
+        'INLA Beta ry disp (Tow level)'#,
+        ## 'glmmTMB Beta (Tow level)',
+        ## 'glmmTMB Beta disp (Tow level)',
+        ## 'glmmTMB Beta ry disp (Tow level)'#,
+        ## 'BRMS Beta disp (Tow level)'#,
+        ## 'BRMS Beta ry disp (Tow level)'#,
+        #'BRMS Cumulative (Tow level)'
+        ## 'Raw Beta means'
+    )
+
+    mods.used = mods %>% filter(name %in% whichModels) %>%
+        mutate(N=1:n(),
+               color=ifelse(color=='#000000', '#000000',
+                            RColorBrewer::brewer.pal(max(N), 'Set1')[N]),
+               fill=ifelse(color=='#000000','#000000',NA)
+               ) %>%
+        mutate(name=factor(name, levels=whichModels)) %>%
+        arrange(name)
+
+    g1 <- newdata %>%
+        filter(Name %in% whichModels) %>%
+        mutate(Name = factor(Name, levels=whichModels)) %>%
+        ggplot() +
+        geom_line(aes(y = response, x = as.numeric(as.character(Year)), colour = Name), alpha=1) +
+        geom_ribbon(aes(y = response, ymin = lower, ymax = upper,
+                        x = as.numeric(as.character(Year)),
+                        fill = Name),
+                    alpha=0.3) +
+        facet_wrap(~Region, nrow=1) +
+        ## scale_color_manual('Models', values=mods.used %>% pull(color)) +
+        ## scale_linetype_manual('Models', values=mods.used %>% pull(linetype)) +
+        ## scale_fill_manual('Models', values=mods.used %>% pull(fill)) +
+        scale_x_continuous('') +
+        scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
+        theme_bw() +
+        ## theme(legend.position='bottom',
+        ##       legend.background = element_rect(fill='#00000020'),
+        ##       legend.key=element_rect(fill='#00000000')) +
+        theme(legend.position='bottom')+
+        guides(colour = guide_legend(title = 'Model'),
+               fill = guide_legend(title = 'Model'))
+    ## guides(colour = guide_legend(title.position = "top", override.aes = list(fill=c(NA,NA,NA,NA,'#000000',NA,NA))))
+    g1
+
+    ggsave(file='../output/figures/ComparisonFigure_beta.disp.vs.beta.ry.disp.pdf', g1, width=9, height=3.5)
+    ggsave(file='../output/figures/ComparisonFigure_beta.disp.vs.beta.ry.disp.png', g1, width=9, height=3.5, dpi=300)
+}
 ## ----end
 
 
+## ----end
+
+## ---- left over rubbish
+if(1==2) {
 
 manta.tow %>% distinct(REEF_NAME, Year) %>%
     group_by(REEF_NAME) %>% count() %>%
@@ -753,3 +897,5 @@ manta.stats %>%
     ggplot() +
     geom_abline(intercept=0, slope=1) +
     geom_point(aes(y=Beta, x=Mean))
+}
+## ----end
