@@ -42,9 +42,9 @@ models <- c(
     ##'BRMS ordinal'
 )
 zone <- c(
-    #'northern'#,
+    'northern'#,
     #'central'#,
-    'southern'
+    #'southern'
 )
 COMPARE_MODELS <- FALSE
 ## Fit stan models===================================================================
@@ -967,19 +967,20 @@ if ( 1 == 2) {
             dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
             
             dd <- dat %>%
-                dplyr::select(Cover, Year, REEF_NAME) %>%
+                dplyr::select(Cover, Year, REEF_NAME, REEF_YEAR) %>%
                 mutate(YEAR = Year)%>%
-                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                pivot_wider(id_cols = c(YEAR,REEF_NAME, REEF_YEAR),
                             names_from = Year,
                             values_from = Cover)
             dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
                 dplyr::select(matches("[0-9]{4}")) %>%
                 as.matrix()
             dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
-                dplyr::select(YEAR, REEF_NAME)
+                dplyr::select(YEAR, REEF_NAME, REEF_YEAR)
 
             mod.northern_inla.beta.ry.disp <- inla(form = dd1~YEAR +
-                                               f(REEF_NAME, model='iid'),
+                                               f(REEF_NAME, model='iid') +
+                                               f(REEF_YEAR, model='iid'),
                                            dat=dd2,
                                            family=rep('beta',ncol(dd1)),
                                            control.fixed = list(mean = 0, prec = 0.001,
@@ -1087,7 +1088,7 @@ if ( 1 == 2) {
     {
         if ('BRMS beta ry disp' %in% models & 'northern' %in% zone) {
             cat('Fitting brms ry disp for Northern\n\n')
-            mod.northern_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME), phi~0+Year),
+            mod.northern_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME/REEF_YEAR), phi~0+Year),
                                                data=manta.tow.northern,
                                                family=Beta(link='logit'),
                                                iter=1e4,
@@ -2114,19 +2115,20 @@ if ( 1 == 2) {
             dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
             
             dd <- dat %>%
-                dplyr::select(Cover, Year, REEF_NAME) %>%
+                dplyr::select(Cover, Year, REEF_NAME, REEF_YEAR) %>%
                 mutate(YEAR = Year)%>%
-                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                pivot_wider(id_cols = c(YEAR,REEF_NAME, REEF_YEAR),
                             names_from = Year,
                             values_from = Cover)
             dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
                 dplyr::select(matches("[0-9]{4}")) %>%
                 as.matrix()
             dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
-                dplyr::select(YEAR, REEF_NAME)
+                dplyr::select(YEAR, REEF_NAME, REEF_YEAR)
 
             mod.central_inla.beta.ry.disp <- inla(form = dd1~YEAR +
-                                               f(REEF_NAME, model='iid'),
+                                               f(REEF_NAME, model='iid') +
+                                               f(REEF_YEAR, model='iid'),
                                            dat=dd2,
                                            family=rep('beta',ncol(dd1)),
                                            control.fixed = list(mean = 0, prec = 0.001,
@@ -3263,19 +3265,20 @@ if ( 1 == 2) {
             dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
             
             dd <- dat %>%
-                dplyr::select(Cover, Year, REEF_NAME) %>%
+                dplyr::select(Cover, Year, REEF_NAME, REEF_YEAR) %>%
                 mutate(YEAR = Year)%>%
-                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                pivot_wider(id_cols = c(YEAR,REEF_NAME, REEF_YEAR),
                             names_from = Year,
                             values_from = Cover)
             dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
                 dplyr::select(matches("[0-9]{4}")) %>%
                 as.matrix()
             dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
-                dplyr::select(YEAR, REEF_NAME)
+                dplyr::select(YEAR, REEF_NAME, REEF_YEAR)
 
             mod.southern_inla.beta.ry.disp <- inla(form = dd1~YEAR +
-                                               f(REEF_NAME, model='iid'),
+                                               f(REEF_NAME, model='iid') +
+                                               f(REEF_YEAR, model='iid'),
                                            dat=dd2,
                                            family=rep('beta',ncol(dd1)),
                                            control.fixed = list(mean = 0, prec = 0.001,
