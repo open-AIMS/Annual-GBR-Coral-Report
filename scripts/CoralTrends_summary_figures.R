@@ -78,6 +78,11 @@ load(file='../data/modelled/mod.northern_brms.beta.disp.RData')
 load(file='../data/modelled/mod.central_brms.beta.disp.RData')
 load(file='../data/modelled/mod.southern_brms.beta.disp.RData')
 
+## BRMS tow, beta ry disp
+load(file='../data/modelled/mod.northern_brms.beta.ry.disp.RData')
+load(file='../data/modelled/mod.central_brms.beta.ry.disp.RData')
+load(file='../data/modelled/mod.southern_brms.beta.ry.disp.RData')
+
 ## BRMS tow, Ordinal
 ## load(file='../data/modelled/mod.northern_brms.cumulative.RData')
 ## load(file='../data/modelled/mod.central_brms.cumulative.RData')
@@ -288,9 +293,10 @@ nd <- manta.tow %>% group_by(Region) %>%
 ## model_source = 'inla.beta'                  # INLA, Tow level, Beta
 ## model_source = 'glmmTMB.beta'               # glmmTMB, Tow level, Beta
 ## model_source = 'glmmTMB.beta.disp'          # glmmTMB, Tow level, Beta disp
-model_source = 'inla.beta.disp'                # INLA, Tow level, Beta disp
+## model_source = 'inla.beta.disp'                # INLA, Tow level, Beta disp
 
 ## model_source = 'brms.beta.disp'             # BRMS, Tow level, Beta disp
+model_source = 'brms.beta.ry.disp'             # BRMS, Tow level, Beta disp
 ## model_source = 'brms.cumulative'            # BRMS, Tow level, Ordinal
 
 ## model_source = 'glmmTMB.beta.disp.rs'
@@ -594,7 +600,8 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
 ## ---- Zip
 files <- list.files(path='../output/figures', pattern=paste0('^manta.*_',model_source), full.names=TRUE)
 files1 <- list.files(path='../output/figures', pattern=paste0('^threePanels.*_',model_source,'(.p..|_with.*)'), full.names=TRUE)
-files = c(files, files1)
+files2 <- list.files(path='../data/modelled', pattern=paste0('^modelled_',model_source), full.names=TRUE)
+files = c(files, files1, files2)
 ## files2 <- list.files(path='../output/figures', pattern=paste0('^threePanels.Bars.*_',model_source), full.names=TRUE)
 zip(
     zipfile=paste0('../output/figures/Figures_',model_source,'_',ifelse(include_n,'with_n',''),'.zip'),
@@ -619,6 +626,7 @@ mods <- tribble(
     'glmmTMB.beta.disp',        'glmmTMB Beta disp (Tow level)',   '#000000', 'solid',
     'glmmTMB.beta.ry.disp',        'glmmTMB Beta ry disp (Tow level)',   '#000000', 'solid',
     'brms.beta.disp',           'BRMS Beta disp (Tow level)',      '',        'solid',
+    'brms.beta.ry.disp',           'BRMS Beta ry disp (Tow level)',      '',        'solid',
     'brms.cumulative',          'BRMS Cumulative (Tow level)',     '',        'solid',
     NA,                       'Raw Means',                         '',        'dashed',
     NA,                       'Raw Beta means',                    '',        'solid',
@@ -718,9 +726,9 @@ newdata = newdata %>%
         'INLA Beta ry disp (Tow level)',
         ## 'glmmTMB Beta (Tow level)',
         ## 'glmmTMB Beta disp (Tow level)',
-        'glmmTMB Beta ry disp (Tow level)'#,
+        'glmmTMB Beta ry disp (Tow level)',
         ## 'BRMS Beta disp (Tow level)'#,
-        ## 'BRMS Beta ry disp (Tow level)'#,
+        'BRMS Beta ry disp (Tow level)'#,
         #'BRMS Cumulative (Tow level)'
         ## 'Raw Beta means'
     )
