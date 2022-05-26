@@ -4,42 +4,53 @@ source('CoralTrends_config.R')
 
 ## ---- loadData
 ## original model
-load(file='../data/modelled/dat.northern_glmer.RData')
-load(file='../data/modelled/dat.central_glmer.RData')
-load(file='../data/modelled/dat.southern_glmer.RData')
+## load(file='../data/modelled/dat.northern_glmer.RData')
+## load(file='../data/modelled/dat.central_glmer.RData')
+## load(file='../data/modelled/dat.southern_glmer.RData')
 
 ## INLA reef, beta
-load(file='../data/modelled/mod.northern_inla_reef.beta.RData')
-load(file='../data/modelled/mod.central_inla_reef.beta.RData')
-load(file='../data/modelled/mod.southern_inla_reef.beta.RData')
+## load(file='../data/modelled/mod.northern_inla_reef.beta.RData')
+## load(file='../data/modelled/mod.central_inla_reef.beta.RData')
+## load(file='../data/modelled/mod.southern_inla_reef.beta.RData')
 
 ## INLA reef, beta scaled
-load(file='../data/modelled/mod.northern_inla_reef.beta.scaled.RData')
-load(file='../data/modelled/mod.central_inla_reef.beta.scaled.RData')
-load(file='../data/modelled/mod.southern_inla_reef.beta.scaled.RData')
+## load(file='../data/modelled/mod.northern_inla_reef.beta.scaled.RData')
+## load(file='../data/modelled/mod.central_inla_reef.beta.scaled.RData')
+## load(file='../data/modelled/mod.southern_inla_reef.beta.scaled.RData')
 
 ## glmmTMB reef, beta
-load(file='../data/modelled/dat.northern_glmmTMB.reef.beta.RData')
-load(file='../data/modelled/dat.central_glmmTMB.reef.beta.RData')
-load(file='../data/modelled/dat.southern_glmmTMB.reef.beta.RData')
+## load(file='../data/modelled/dat.northern_glmmTMB.reef.beta.RData')
+## load(file='../data/modelled/dat.central_glmmTMB.reef.beta.RData')
+## load(file='../data/modelled/dat.southern_glmmTMB.reef.beta.RData')
 
 ## glmmTMB reef, beta disp
-load(file='../data/modelled/dat.northern_glmmTMB.reef.beta.disp.RData') #
-load(file='../data/modelled/dat.central_glmmTMB.reef.beta.disp.RData')  #
-load(file='../data/modelled/dat.southern_glmmTMB.reef.beta.disp.RData') #
+## load(file='../data/modelled/dat.northern_glmmTMB.reef.beta.disp.RData') #
+## load(file='../data/modelled/dat.central_glmmTMB.reef.beta.disp.RData')  #
+## load(file='../data/modelled/dat.southern_glmmTMB.reef.beta.disp.RData') #
 
 ## INLA tow, beta
-load(file='../data/modelled/mod.northern_inla.beta.RData') #
-load(file='../data/modelled/mod.central_inla.beta.RData')  #
-load(file='../data/modelled/mod.southern_inla.beta.RData') #
+## load(file='../data/modelled/mod.northern_inla.beta.RData') #
+## load(file='../data/modelled/mod.central_inla.beta.RData')  #
+## load(file='../data/modelled/mod.southern_inla.beta.RData') #
+
+## INLA tow, beta disp
+load(file='../data/modelled/mod.northern_inla.beta.disp.RData') #
+dat.northern_inla.beta.disp <- dat.northern_inla.beta.disp %>%
+    rename(response = mean)
+load(file='../data/modelled/mod.central_inla.beta.disp.RData')  #
+dat.central_inla.beta.disp <- dat.central_inla.beta.disp %>%
+    rename(response = mean)
+load(file='../data/modelled/mod.southern_inla.beta.disp.RData') #
+dat.southern_inla.beta.disp <- dat.southern_inla.beta.disp %>%
+    rename(response = mean)
 
 ## glmmTMB tow, beta
-load(file='../data/modelled/mod.northern_glmmTMB.beta.RData') #
-load(file='../data/modelled/mod.central_glmmTMB.beta.RData')  #
-load(file='../data/modelled/mod.southern_glmmTMB.beta.RData') #
+## load(file='../data/modelled/mod.northern_glmmTMB.beta.RData') #
+## load(file='../data/modelled/mod.central_glmmTMB.beta.RData')  #
+## load(file='../data/modelled/mod.southern_glmmTMB.beta.RData') #
 
 ## glmmTMB tow, beta disp
-load(file='../data/modelled/mod.gbr_glmmTMB.beta.disp.RData') #
+## load(file='../data/modelled/mod.gbr_glmmTMB.beta.disp.RData') #
 load(file='../data/modelled/mod.northern_glmmTMB.beta.disp.RData') #
 load(file='../data/modelled/mod.central_glmmTMB.beta.disp.RData')  #
 load(file='../data/modelled/mod.southern_glmmTMB.beta.disp.RData') #
@@ -50,14 +61,14 @@ load(file='../data/modelled/mod.central_brms.beta.disp.RData')
 load(file='../data/modelled/mod.southern_brms.beta.disp.RData')
 
 ## BRMS tow, Ordinal
-load(file='../data/modelled/mod.northern_brms.cumulative.RData')
-load(file='../data/modelled/mod.central_brms.cumulative.RData')
-load(file='../data/modelled/mod.southern_brms.cumulative.RData')
+## load(file='../data/modelled/mod.northern_brms.cumulative.RData')
+## load(file='../data/modelled/mod.central_brms.cumulative.RData')
+## load(file='../data/modelled/mod.southern_brms.cumulative.RData')
 
 ## glmmTMB tow, beta disp random slopes
-load(file='../data/modelled/mod.northern_glmmTMB.beta.disp.rs.RData')
-load(file='../data/modelled/mod.central_glmmTMB.beta.disp.rs.RData')
-load(file='../data/modelled/mod.southern_glmmTMB.beta.disp.rs.RData')
+## load(file='../data/modelled/mod.northern_glmmTMB.beta.disp.rs.RData')
+## load(file='../data/modelled/mod.central_glmmTMB.beta.disp.rs.RData')
+## load(file='../data/modelled/mod.southern_glmmTMB.beta.disp.rs.RData')
 
 load('../data/processed/manta.tow.RData')
 load('../data/processed/manta.sum.RData')
@@ -258,7 +269,8 @@ nd <- manta.tow %>% group_by(Region) %>%
 
 ## model_source = 'inla.beta'                  # INLA, Tow level, Beta
 ## model_source = 'glmmTMB.beta'               # glmmTMB, Tow level, Beta
-model_source = 'glmmTMB.beta.disp'          # glmmTMB, Tow level, Beta disp
+## model_source = 'glmmTMB.beta.disp'          # glmmTMB, Tow level, Beta disp
+model_source = 'inla.beta.disp'                # INLA, Tow level, Beta disp
 
 ## model_source = 'brms.beta.disp'             # BRMS, Tow level, Beta disp
 ## model_source = 'brms.cumulative'            # BRMS, Tow level, Ordinal
@@ -269,14 +281,15 @@ include_gbr <- FALSE
 ## ---- threePanel
 {
     ## ---- defineData
-    dat.gbr <- sym(paste0('dat.gbr_',model_source))
+    ##dat.gbr <- sym(paste0('dat.gbr_',model_source))
     dat.northern <- sym(paste0('dat.northern_',model_source))
     dat.central <- sym(paste0('dat.central_',model_source))
     dat.southern <- sym(paste0('dat.southern_',model_source))
 
     newdata =
-        dat.gbr %>% eval %>% mutate(Region='GBR') %>%
-        rbind(dat.northern %>% eval %>% mutate(Region='Northern GBR')) %>%
+        #dat.gbr %>% eval %>% mutate(Region='GBR') %>%
+        #rbind(dat.northern %>% eval %>% mutate(Region='Northern GBR')) %>%
+        dat.northern %>% eval %>% mutate(Region='Northern GBR') %>%
         rbind(dat.central %>% eval %>% mutate(Region='Central GBR')) %>%
         rbind(dat.southern %>% eval %>% mutate(Region='Southern GBR')) %>%
         mutate(Region=factor(Region, levels=unique(Region))) %>%

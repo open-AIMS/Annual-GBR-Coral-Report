@@ -2,6 +2,9 @@ source('CoralTrends_functions.R')
 CoralTrends_checkPackages()
 source('CoralTrends_config.R')
 library(INLA)
+library(emmeans)
+library(DHARMa)
+library(brms)
 
 load('../data/processed/manta.sum.RData')
 load('../data/processed/manta.tow.RData')
@@ -31,13 +34,22 @@ dat.all = manta.sum %>%
 ##
 models <- c(
     ##'BRMS beta vanilla',
-    'BRMS beta disp',
+    #'BRMS beta disp'#,
+    'BRMS beta ry disp'#,
     ##'glmmTMB beta vanilla',
-    'glmmTMB beta disp',
+    #'glmmTMB_tow beta disp',
+    #'glmmTMB_tow beta ry disp'
     ##'BRMS ordinal'
 )
+zone <- c(
+    #'northern'#,
+    #'central'#,
+    'southern'
+)
+COMPARE_MODELS <- FALSE
 ## Fit stan models===================================================================
 
+if ( 1 == 2) {
 ## GBR
 {
     ## ---- GBR
@@ -600,6 +612,7 @@ models <- c(
     }
     ## ----end
 }
+}
 
 ## Northern
 {
@@ -839,7 +852,7 @@ models <- c(
 
     ## ---- Northern.INLA.tow.beta scaled
     {
-        if ("INLA_tow beta scaled") {
+        if ("INLA_tow beta scaled" %in% models) {
             dat.inla <- dataINLA(dat=manta.tow.northern, level='tow')
             dat = dat.inla[['dat.1']]
             dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
@@ -874,7 +887,7 @@ models <- c(
     ## ----end
     ## ---- Northern.INLA.tow.beta
     {
-        if ("INLA_tow beta") {
+        if ("INLA_tow beta" %in% models) {
             dat.inla <- dataINLA(dat=manta.tow.northern, level='tow')
             dat = dat.inla[['dat.1']]
             dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
@@ -893,6 +906,94 @@ models <- c(
                                                     n.2=dat.inla[['n.2']], FUN=plogis)
             save(mod.northern_inla.beta, dat.northern_inla.beta, file='../data/modelled/mod.northern_inla.beta.RData')
             rm(list=c('dat.northern_inla.beta', 'mod.northern_inla.beta'))
+            gc()
+        }
+    }
+    ## ----end
+    ## ---- Northern.INLA.tow.beta **
+    {
+        if ("INLA_tow beta disp" %in% models) {
+            dat.inla <- dataINLA(dat=manta.tow.northern, level='tow')
+            dat = dat.inla[['dat.1']]
+            dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+            rawAdd <- ggproto_Raw(dat.cellmeans)
+            dat.scale = manta.tow.northern %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+            ## we will leverage a mixed likelihood model
+            dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+            
+            dd <- dat %>%
+                dplyr::select(Cover, Year, REEF_NAME) %>%
+                mutate(YEAR = Year)%>%
+                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                            names_from = Year,
+                            values_from = Cover)
+            dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(matches("[0-9]{4}")) %>%
+                as.matrix()
+            dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(YEAR, REEF_NAME)
+
+            mod.northern_inla.beta.disp <- inla(form = dd1~YEAR +
+                                               f(REEF_NAME, model='iid'),
+                                           dat=dd2,
+                                           family=rep('beta',ncol(dd1)),
+                                           control.fixed = list(mean = 0, prec = 0.001,
+                                                                mean.intercept = 0.5,
+                                                                prec.intercept = 0.001),
+                                           control.predictor = list(compute = TRUE,
+                                                                    link = 1,
+                                                                    quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                    )
+                                           )
+            dat.northern_inla.beta.disp <- cellMeansINLA(mod=mod.northern_inla.beta.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                    n.2=dat.inla[['n.2']], FUN=plogis)
+            save(mod.northern_inla.beta.disp, dat.northern_inla.beta.disp, file='../data/modelled/mod.northern_inla.beta.disp.RData')
+            rm(list=c('dat.northern_inla.beta.disp', 'mod.northern_inla.beta.disp'))
+            gc()
+        }
+    }
+    ## ----end
+    ## ---- Northern.INLA.tow.ry.beta **
+    {
+        if ("INLA_tow beta ry disp" %in% models) {
+            dat.inla <- dataINLA(dat=manta.tow.northern, level='tow')
+            dat = dat.inla[['dat.1']]
+            dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+            rawAdd <- ggproto_Raw(dat.cellmeans)
+            dat.scale = manta.tow.northern %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+            ## we will leverage a mixed likelihood model
+            dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+            
+            dd <- dat %>%
+                dplyr::select(Cover, Year, REEF_NAME) %>%
+                mutate(YEAR = Year)%>%
+                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                            names_from = Year,
+                            values_from = Cover)
+            dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(matches("[0-9]{4}")) %>%
+                as.matrix()
+            dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(YEAR, REEF_NAME)
+
+            mod.northern_inla.beta.ry.disp <- inla(form = dd1~YEAR +
+                                               f(REEF_NAME, model='iid'),
+                                           dat=dd2,
+                                           family=rep('beta',ncol(dd1)),
+                                           control.fixed = list(mean = 0, prec = 0.001,
+                                                                mean.intercept = 0.5,
+                                                                prec.intercept = 0.001),
+                                           control.predictor = list(compute = TRUE,
+                                                                    link = 1,
+                                                                    quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                    )
+                                           )
+            dat.northern_inla.beta.ry.disp <- cellMeansINLA(mod=mod.northern_inla.beta.ry.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                    n.2=dat.inla[['n.2']], FUN=plogis)
+            save(mod.northern_inla.beta.ry.disp, dat.northern_inla.beta.ry.disp, file='../data/modelled/mod.northern_inla.beta.ry.disp.RData')
+            rm(list=c('dat.northern_inla.beta.ry.disp', 'mod.northern_inla.beta.ry.disp'))
             gc()
         }
     }
@@ -930,9 +1031,10 @@ models <- c(
         }    
     }
     ## ----end
-    ## ---- Northern.BRMS.tow.beta disp
+    ## ---- Northern.BRMS.tow.beta disp **
     {
-        if ('BRMS beta disp' %in% models) {
+        if ('BRMS beta disp' %in% models & 'northern' %in% zone) {
+            cat('Fitting brms disp for Northern\n\n')
             mod.northern_brms.beta.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME), phi~0+Year),
                                                data=manta.tow.northern,
                                                family=Beta(link='logit'),
@@ -945,10 +1047,90 @@ models <- c(
                                                    prior(gamma(2, 1), class = "sd") #+
                                                ## prior(gamma(2, 1), class = "phi")
                                                )
-            dat.northern_brms.beta.disp = emmeans(mod.northern_brms.beta.disp, ~Year, type='response') %>%
+            ## ---- Northern.BRMS.tow.beta disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_northern_brms.beta.disp.pdf')
+                rstan::traceplot(mod.northern_brms.beta.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_northern_brms.beta.disp.pdf')
+                mod.northern_brms.beta.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.northern_brms.beta.disp %>%
+                    posterior_predict(nsamples = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.northern$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_northern_brms.beta.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.northern_brms.beta.disp.RData'))
+            }
+            ## ----end
+            dat.northern_brms.beta.disp = emmeans(mod.northern_brms.beta.disp,
+                                                  ~Year, type='response') %>%
                 as.data.frame()
             save(mod.northern_brms.beta.disp, dat.northern_brms.beta.disp, file=paste0('../data/modelled/mod.northern_brms.beta.disp.RData'))
             rm(list=c('dat.northern_brms.beta.disp', 'mod.northern_brms.beta.disp'))
+            gc()
+        }  
+    }
+    ## ----end
+    ## ---- Northern.BRMS.tow.beta ry disp **
+    {
+        if ('BRMS beta ry disp' %in% models & 'northern' %in% zone) {
+            cat('Fitting brms ry disp for Northern\n\n')
+            mod.northern_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME), phi~0+Year),
+                                               data=manta.tow.northern,
+                                               family=Beta(link='logit'),
+                                               iter=1e4,
+                                               warmup=5e3,
+                                               thin=5,
+                                               chains=4, cores=4,
+                                               prior = prior(normal(0, 3), class = "b") +
+                                                   prior(normal(0, 3), class = "Intercept") +
+                                                   prior(gamma(2, 1), class = "sd") #+
+                                               ## prior(gamma(2, 1), class = "phi")
+                                               )
+            ## ---- Northern.BRMS.tow.beta disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_northern_brms.beta.ry.disp.pdf')
+                rstan::traceplot(mod.northern_brms.beta.ry.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_northern_brms.beta.ry.disp.pdf')
+                mod.northern_brms.beta.ry.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.northern_brms.beta.ry.disp %>%
+                    posterior_predict(nsamples = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.northern$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_northern_brms.beta.ry.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.northern_brms.beta.ry.disp.RData'))
+            }
+            ## ----end
+            dat.northern_brms.beta.ry.disp = emmeans(mod.northern_brms.beta.ry.disp,
+                                                  ~Year, type='response') %>%
+                as.data.frame()
+            save(mod.northern_brms.beta.ry.disp, dat.northern_brms.beta.ry.disp, file=paste0('../data/modelled/mod.northern_brms.beta.ry.disp.RData'))
+            rm(list=c('dat.northern_brms.beta.ry.disp', 'mod.northern_brms.beta.ry.disp'))
             gc()
         }  
     }
@@ -986,28 +1168,69 @@ models <- c(
         }
     }
     ## ----end
-    ## ---- Northern.glmmTMB.tow.beta disp
+    ## ---- Northern.glmmTMB.tow.beta ry disp **
     {
-        if ('glmmTMB_tow beta disp' %in% models) {
-            mod.northern_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
+        if ('glmmTMB_tow beta ry disp' %in% models & 'northern' %in% zone) {
+            nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
+            mod.northern_glmmTMB.beta.ry.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
                                                       dispformula = ~Year,
                                                       data=manta.tow.northern,
                                                       ## weights=dat.all.northern$Tows,
-                                                      family=beta_family())
+                                                      family=beta_family(),
+                                                      control = glmmTMBControl(parallel = nt))
+            dat.northern_glmmTMB.beta.ry.disp = emmeans(mod.northern_glmmTMB.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Northern.glmmTMB.tow.beta disp diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_northern_glmmTMB.beta.ry.disp.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.northern_glmmTMB.beta.ry.disp,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.northern_glmmTMB.beta.ry.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.northern_glmmTMB.beta.ry.disp.RData'))
+            }
+            save(mod.northern_glmmTMB.beta.ry.disp, dat.northern_glmmTMB.beta.ry.disp,
+                 file=paste0('../data/modelled/mod.northern_glmmTMB.beta.ry.disp.RData'))
+        }
+    }
+    ## ----end
+    ## ---- Northern.glmmTMB.tow.beta disp **
+    {
+        if ('glmmTMB_tow beta disp' %in% models & 'northern' %in% zone) {
+            nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
+            mod.northern_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME),
+                                                      dispformula = ~Year,
+                                                      data=manta.tow.northern,
+                                                      ## weights=dat.all.northern$Tows,
+                                                      family=beta_family(),
+                                                      control = glmmTMBControl(parallel = nt))
             dat.northern_glmmTMB.beta.disp = emmeans(mod.northern_glmmTMB.beta.disp, ~Year, type='response') %>%
                 as.data.frame()
-            ## DHARMa::simulateResiduals(mod.northern_glmmTMB.beta.disp, plot=TRUE)
-            ## performance::check_model(mod.northern_glmmTMB.beta.disp)
-            save(mod.northern_glmmTMB.beta.disp, dat.northern_glmmTMB.beta.disp, file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
-            ## Lets also capture the full posteriors for years
-            
+            ## ---- Northern.glmmTMB.tow.beta disp diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_northern_glmmTMB.beta.disp.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.northern_glmmTMB.beta.disp,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.northern_glmmTMB.beta.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.northern_glmmTMB.beta.disp.RData'))
+            }
+            save(mod.northern_glmmTMB.beta.disp, dat.northern_glmmTMB.beta.disp,
+                 file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
         }
     }
     ## ----end
     ## ---- Northern.glmmTMB.tow.beta disp random.effects
     {
-        if ('glmmTMB_tow beta disp' %in% models) {
+        if ('glmmTMB_tow beta disp random slope' %in% models) {
             nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
             mod.northern_glmmTMB.beta.disp.rs <- glmmTMB(Cover ~ Year + (Year|REEF_NAME),
                                                          dispformula = ~Year,
                                                          data=manta.tow.northern,
@@ -1016,8 +1239,18 @@ models <- c(
                                                          control = glmmTMBControl(parallel=nt))
             dat.northern_glmmTMB.beta.disp.rs = emmeans(mod.northern_glmmTMB.beta.disp.rs, ~Year, type='response') %>%
                 as.data.frame()
-            DHARMa::simulateResiduals(mod.northern_glmmTMB.beta.disp.rs, plot=TRUE)
-            performance::check_model(mod.northern_glmmTMB.beta.disp.rs)
+            ## ---- Northern.glmmTMB.tow.beta disp random.effects diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_northern_glmmTMB.beta.disp.rs.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.northern_glmmTMB.beta.disp.rs,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.northern_glmmTMB.beta.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.northern_glmmTMB.beta.disp.RData'))
+                ## performance::check_model(mod.northern_glmmTMB.beta.disp.rs)
+            }
             save(mod.northern_glmmTMB.beta.disp.rs, dat.northern_glmmTMB.beta.disp.rs, file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.rs.RData'))
         }
     }
@@ -1113,7 +1346,7 @@ models <- c(
     ## ----end
     ## ---- Northern.CLMM.tow.ordinal
     {
-        if ('CLMM') {
+        if ('CLMM' %in% models) {
             library(ordinal) 
             manta.tow.northern = manta.tow %>%
                 filter(Region=='Northern GBR') %>%
@@ -1147,31 +1380,124 @@ models <- c(
     ## ----end
     ## ---- Northern.glmmTMB.tow.beta.linear
     {
-        mod.northern_glmmTMB.beta.linear <- glmmTMB(Cover ~ REPORT_YEAR + (1|REEF_NAME/REEF_YEAR),
-                                                    data=manta.tow.northern,
-                                                    ## weights=dat.all.northern$Tows,
-                                                    family=beta_family())
-        dat.northern_glmmTMB.beta.linear = emmeans(mod.northern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=unique(manta.tow.northern$REPORT_YEAR)), type='response') %>%
-            as.data.frame()
+        if ('glmmTMB.beta.linear' %in% models) {
+            mod.northern_glmmTMB.beta.linear <- glmmTMB(Cover ~ REPORT_YEAR + (1|REEF_NAME/REEF_YEAR),
+                                                        data=manta.tow.northern,
+                                                        ## weights=dat.all.northern$Tows,
+                                                        family=beta_family())
+            dat.northern_glmmTMB.beta.linear = emmeans(mod.northern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=unique(manta.tow.northern$REPORT_YEAR)), type='response') %>%
+                as.data.frame()
 
-        load(file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
-        dat.northern_glmmTMB.beta.linear %>%
-            ggplot() +
-            geom_line(data=dat.northern_glmmTMB.beta.disp, aes(y=response, x=as.numeric(as.character(Year))), color='blue') +
-            geom_ribbon(data=dat.northern_glmmTMB.beta.disp,aes(ymin=lower.CL, ymax=upper.CL, x=as.numeric(as.character(Year))), fill='lightblue', alpha=0.3) +
-            geom_ribbon(aes(ymin=lower.CL, ymax=upper.CL, x=REPORT_YEAR), fill='orange', alpha=0.5) +
-            geom_line(aes(y=response, x=REPORT_YEAR)) +
-            scale_x_continuous('') +
-            scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
-            theme_classic() +
-            ggtitle('Northern GBR')
+            load(file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
+            dat.northern_glmmTMB.beta.linear %>%
+                ggplot() +
+                geom_line(data=dat.northern_glmmTMB.beta.disp, aes(y=response, x=as.numeric(as.character(Year))), color='blue') +
+                geom_ribbon(data=dat.northern_glmmTMB.beta.disp,aes(ymin=lower.CL, ymax=upper.CL, x=as.numeric(as.character(Year))), fill='lightblue', alpha=0.3) +
+                geom_ribbon(aes(ymin=lower.CL, ymax=upper.CL, x=REPORT_YEAR), fill='orange', alpha=0.5) +
+                geom_line(aes(y=response, x=REPORT_YEAR)) +
+                scale_x_continuous('') +
+                scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
+                theme_classic() +
+                ggtitle('Northern GBR')
+        }
     }
     ## ----end
 
-    ## Compare the models
+    ## Compare models
+    {
+        if (COMPARE_MODELS) {
+            ## ---- beta.disp
+        {
+            load(file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
+            load(file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.rs.RData'))
+            load(file=paste0('../data/modelled/mod.northern_brms.beta.disp.RData'))
+            load(file=paste0('../data/modelled/mod.northern_inla.beta.disp.RData'))
+
+            pdf(file = '../output/figures/comparison.northern.pdf')
+            g1 <- ggplot() +
+                geom_line(data = dat.northern_brms.beta.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'brms')) +
+                geom_ribbon(data = dat.northern_brms.beta.disp,
+                            aes(y = response,
+                                ymin = lower.HPD, ymax = upper.HPD,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'brms'),
+                            alpha=0.3) +
+                geom_line(data = dat.northern_glmmTMB.beta.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'glmmTMB')) +
+                geom_ribbon(data = dat.northern_glmmTMB.beta.disp,
+                            aes(y = response,
+                                ymin = lower.CL, ymax = upper.CL,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'glmmTMB'),
+                            alpha=0.3) + 
+                geom_line(data = dat.northern_inla.beta.disp,
+                          aes(y = mean,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'inla')) +
+                geom_ribbon(data = dat.northern_inla.beta.disp,
+                            aes(y = mean,
+                                ymin = lower, ymax = upper,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'inla'),
+                            alpha=0.3) 
+            print(g1)
+            dev.off()
+        }
+            ## ----end
+            ## ---- beta.ry.disp
+        {
+            load(file=paste0('../data/modelled/mod.northern_glmmTMB.beta.ry.disp.RData'))
+            load(file=paste0('../data/modelled/mod.northern_brms.beta.ry.disp.RData'))
+            load(file=paste0('../data/modelled/mod.northern_inla.beta.ry.disp.RData'))
+            pdf(file = '../output/figures/comparison.northern.ry.pdf')
+            g1 <- ggplot() +
+                geom_line(data = dat.northern_brms.beta.ry.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'brms')) +
+                geom_ribbon(data = dat.northern_brms.beta.ry.disp,
+                            aes(y = response,
+                                ymin = lower.HPD, ymax = upper.HPD,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'brms'),
+                            alpha=0.3) +
+                geom_line(data = dat.northern_glmmTMB.beta.ry.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'glmmTMB')) +
+                geom_ribbon(data = dat.northern_glmmTMB.beta.ry.disp,
+                            aes(y = response,
+                                ymin = lower.CL, ymax = upper.CL,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'glmmTMB'),
+                            alpha=0.3) + 
+                geom_line(data = dat.northern_inla.beta.ry.disp,
+                          aes(y = mean,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'inla')) +
+                geom_ribbon(data = dat.northern_inla.beta.ry.disp,
+                            aes(y = mean,
+                                ymin = lower, ymax = upper,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'inla'),
+                            alpha=0.3) 
+            print(g1)
+            dev.off()
+        }
+            ## ----end
+
+        }
+    }
+    
+    if (1==2) {
+        ## Compare the models
     {
         ## ---- Northern Compare models
-
 
         load(file='../data/modelled/dat.northern.RData')
         dat.northern.original <- dat.northern
@@ -1363,8 +1689,8 @@ models <- c(
 
         rm(list=c('dat.northern','mod.northern','mod.northern_inla_beta','newdata.northern','newdata.northern_beta', 'mod_northern_inla_binomial','newdata.northern_binomial'))
     }
-    ## ----end
-    ## ---- junk
+        ## ----end
+        ## ---- junk
     {
 
         ## summary(mod.northern)
@@ -1406,7 +1732,8 @@ models <- c(
         ## rm(list=c('last_year','mod.northern', 'dat.northern', 'coefs', 'Fit'))
         ## gc()
     }
-    ## ----end
+        ## ----end
+    }
 }
 ## ----end
 
@@ -1671,7 +1998,7 @@ models <- c(
 
     ## ---- Central.INLA.tow.beta scaled
     {
-        if ("INLA_tow beta scaled") {
+        if ("INLA_tow beta scaled" %in% models) {
             dat.inla <- dataINLA(dat=manta.tow.central, level='tow')
             dat = dat.inla[['dat.1']]
             dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
@@ -1706,7 +2033,7 @@ models <- c(
     ## ----end
     ## ---- Central.INLA.tow.beta
     {
-        if ("INLA_tow beta") {
+        if ("INLA_tow beta" %in% models) {
             dat.inla <- dataINLA(dat=manta.tow.central, level='tow')
             dat = dat.inla[['dat.1']]
             dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
@@ -1726,6 +2053,94 @@ models <- c(
                                                    n.2=dat.inla[['n.2']], FUN=plogis)
             save(mod.central_inla.beta, dat.central_inla.beta, file='../data/modelled/mod.central_inla.beta.RData')
             rm(list=c('dat.central_inla.beta', 'mod.central_inla.beta'))
+            gc()
+        }
+    }
+    ## ----end
+    ## ---- Central.INLA.tow.beta **
+    {
+        if ("INLA_tow beta disp" %in% models) {
+            dat.inla <- dataINLA(dat=manta.tow.central, level='tow')
+            dat = dat.inla[['dat.1']]
+            dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+            rawAdd <- ggproto_Raw(dat.cellmeans)
+            dat.scale = manta.tow.central %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+            ## we will leverage a mixed likelihood model
+            dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+            
+            dd <- dat %>%
+                dplyr::select(Cover, Year, REEF_NAME) %>%
+                mutate(YEAR = Year)%>%
+                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                            names_from = Year,
+                            values_from = Cover)
+            dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(matches("[0-9]{4}")) %>%
+                as.matrix()
+            dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(YEAR, REEF_NAME)
+
+            mod.central_inla.beta.disp <- inla(form = dd1~YEAR +
+                                               f(REEF_NAME, model='iid'),
+                                           dat=dd2,
+                                           family=rep('beta',ncol(dd1)),
+                                           control.fixed = list(mean = 0, prec = 0.001,
+                                                                mean.intercept = 0.5,
+                                                                prec.intercept = 0.001),
+                                           control.predictor = list(compute = TRUE,
+                                                                    link = 1,
+                                                                    quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                    )
+                                           )
+            dat.central_inla.beta.disp <- cellMeansINLA(mod=mod.central_inla.beta.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                    n.2=dat.inla[['n.2']], FUN=plogis)
+            save(mod.central_inla.beta.disp, dat.central_inla.beta.disp, file='../data/modelled/mod.central_inla.beta.disp.RData')
+            rm(list=c('dat.central_inla.beta.disp', 'mod.central_inla.beta.disp'))
+            gc()
+        }
+    }
+    ## ----end
+    ## ---- Central.INLA.tow.ry.beta **
+    {
+        if ("INLA_tow beta ry disp" %in% models) {
+            dat.inla <- dataINLA(dat=manta.tow.central, level='tow')
+            dat = dat.inla[['dat.1']]
+            dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+            rawAdd <- ggproto_Raw(dat.cellmeans)
+            dat.scale = manta.tow.central %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+            ## we will leverage a mixed likelihood model
+            dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+            
+            dd <- dat %>%
+                dplyr::select(Cover, Year, REEF_NAME) %>%
+                mutate(YEAR = Year)%>%
+                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                            names_from = Year,
+                            values_from = Cover)
+            dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(matches("[0-9]{4}")) %>%
+                as.matrix()
+            dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(YEAR, REEF_NAME)
+
+            mod.central_inla.beta.ry.disp <- inla(form = dd1~YEAR +
+                                               f(REEF_NAME, model='iid'),
+                                           dat=dd2,
+                                           family=rep('beta',ncol(dd1)),
+                                           control.fixed = list(mean = 0, prec = 0.001,
+                                                                mean.intercept = 0.5,
+                                                                prec.intercept = 0.001),
+                                           control.predictor = list(compute = TRUE,
+                                                                    link = 1,
+                                                                    quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                    )
+                                           )
+            dat.central_inla.beta.ry.disp <- cellMeansINLA(mod=mod.central_inla.beta.ry.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                    n.2=dat.inla[['n.2']], FUN=plogis)
+            save(mod.central_inla.beta.ry.disp, dat.central_inla.beta.ry.disp, file='../data/modelled/mod.central_inla.beta.ry.disp.RData')
+            rm(list=c('dat.central_inla.beta.ry.disp', 'mod.central_inla.beta.ry.disp'))
             gc()
         }
     }
@@ -1763,9 +2178,10 @@ models <- c(
         }    
     }
     ## ----end
-    ## ---- Central.BRMS.tow.beta disp
+    ## ---- Central.BRMS.tow.beta disp **
     {
-        if ('BRMS beta disp' %in% models) {
+        if ('BRMS beta disp' %in% models & 'central' %in% zone) {
+            cat('Fitting brms disp for Central\n\n')
             mod.central_brms.beta.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME), phi~0+Year),
                                               data=manta.tow.central,
                                               family=Beta(link='logit'),
@@ -1780,8 +2196,86 @@ models <- c(
                                               )
             dat.central_brms.beta.disp = emmeans(mod.central_brms.beta.disp, ~Year, type='response') %>%
                 as.data.frame()
+            ## ---- Central.BRMS.tow.beta disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_central_brms.beta.disp.pdf')
+                rstan::traceplot(mod.central_brms.beta.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_central_brms.beta.disp.pdf')
+                mod.central_brms.beta.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.central_brms.beta.disp %>%
+                    posterior_predict(ndraws = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.central$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_central_brms.beta.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.central_brms.beta.disp.RData'))
+            }
+            ## ----end
             save(mod.central_brms.beta.disp, dat.central_brms.beta.disp, file=paste0('../data/modelled/mod.central_brms.beta.disp.RData'))
             rm(list=c('dat.central_brms.beta.disp', 'mod.central_brms.beta.disp'))
+            gc()
+        }  
+    }
+    ## ----end
+    ## ---- Central.BRMS.tow.beta ry disp **
+    {
+        if ('BRMS beta ry disp' %in% models & 'central' %in% zone) {
+            cat('Fitting brms ry disp for Central\n\n')
+            mod.central_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME/REEF_YEAR), phi~0+Year),
+                                              data=manta.tow.central,
+                                              family=Beta(link='logit'),
+                                              iter=1e4,
+                                              warmup=5e3,
+                                              thin=5,
+                                              chains=4, cores=4,
+                                              prior = prior(normal(0, 3), class = "b") +
+                                                  prior(normal(0, 3), class = "Intercept") +
+                                                  prior(gamma(2, 1), class = "sd") #+
+                                              ## prior(gamma(2, 1), class = "phi")
+                                              )
+            dat.central_brms.beta.ry.disp = emmeans(mod.central_brms.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Central.BRMS.tow.beta ry disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_central_brms.beta.ry.disp.pdf')
+                rstan::traceplot(mod.central_brms.beta.ry.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_central_brms.beta.ry.disp.pdf')
+                mod.central_brms.beta.ry.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.central_brms.beta.ry.disp %>%
+                    posterior_predict(ndraws = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.central$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_central_brms.beta.ry.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.central_brms.beta.ry.disp.RData'))
+            }
+            ## ----end
+            save(mod.central_brms.beta.ry.disp, dat.central_brms.beta.ry.disp, file=paste0('../data/modelled/mod.central_brms.beta.ry.disp.RData'))
+            rm(list=c('dat.central_brms.beta.ry.disp', 'mod.central_brms.beta.ry.disp'))
             gc()
         }  
     }
@@ -1819,19 +2313,61 @@ models <- c(
         }
     }
     ## ----end
-    ## ---- Central.glmmTMB.tow.beta disp
+    ## ---- Central.glmmTMB.tow.beta disp **
     {
-        if ('glmmTMB_tow beta disp' %in% models) {
-            mod.central_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
+        if ('glmmTMB_tow beta disp' %in% models & 'central' %in% zone) {
+            nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
+            mod.central_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME),
                                                      dispformula = ~Year,
                                                      data=manta.tow.central,
                                                      ## weights=dat.all.central$Tows,
-                                                     family=beta_family())
+                                                     family=beta_family(),
+                                                     control = glmmTMBControl(parallel = nt))
             dat.central_glmmTMB.beta.disp = emmeans(mod.central_glmmTMB.beta.disp, ~Year, type='response') %>%
                 as.data.frame()
-            ## DHARMa::simulateResiduals(mod.central_glmmTMB.beta.disp, plot=TRUE)
-            ## performance::check_model(mod.central_glmmTMB.beta.disp)
+            ## ---- Central.glmmTMB.tow.beta disp diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_central_glmmTMB.beta.disp.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.central_glmmTMB.beta.disp,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.central_glmmTMB.beta.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.central_glmmTMB.beta.disp.RData'))
+            }
+            ## ----end
             save(mod.central_glmmTMB.beta.disp, dat.central_glmmTMB.beta.disp, file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.RData'))
+        }
+    }
+    ## ----end
+    ## ---- Central.glmmTMB.tow.beta ry disp **
+    {
+        if ('glmmTMB_tow beta ry disp' %in% models & 'central' %in% zone) {
+            nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
+            mod.central_glmmTMB.beta.ry.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
+                                                     dispformula = ~Year,
+                                                     data=manta.tow.central,
+                                                     ## weights=dat.all.central$Tows,
+                                                     family=beta_family(),
+                                                     control = glmmTMBControl(parallel = nt))
+            dat.central_glmmTMB.beta.ry.disp = emmeans(mod.central_glmmTMB.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Central.glmmTMB.tow.beta ry disp diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_central_glmmTMB.beta.ry.disp.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.central_glmmTMB.beta.ry.disp,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.central_glmmTMB.beta.ry.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.central_glmmTMB.beta.ry.disp.RData'))
+            }
+            ## ----end
+            save(mod.central_glmmTMB.beta.ry.disp, dat.central_glmmTMB.beta.ry.disp, file=paste0('../data/modelled/mod.central_glmmTMB.beta.ry.disp.RData'))
         }
     }
     ## ----end
@@ -1839,16 +2375,30 @@ models <- c(
     {
         if ('glmmTMB_tow beta disp' %in% models) {
             nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
             mod.central_glmmTMB.beta.disp.rs <- glmmTMB(Cover ~ Year + (Year|REEF_NAME),
                                                         dispformula = ~Year,
                                                         data=manta.tow.central,
                                                         ## weights=dat.all.central$Tows,
                                                         family=beta_family(),
                                                         control = glmmTMBControl(parallel=nt))
-            dat.central_glmmTMB.beta.disp.rs = emmeans(mod.central_glmmTMB.beta.disp.rs, ~Year, type='response') %>%
+            dat.central_glmmTMB.beta.disp.rs = emmeans(mod.central_glmmTMB.beta.disp.rs,
+                                                       ~Year, type='response') %>%
                 as.data.frame()
-            DHARMa::simulateResiduals(mod.central_glmmTMB.beta.disp.rs, plot=TRUE)
-            performance::check_model(mod.central_glmmTMB.beta.disp.rs)
+            ## did not converge
+            ## ---- Central.glmmTMB.tow.beta disp random.effects diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_central_glmmTMB.beta.disp.rs.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.central_glmmTMB.beta.disp.rs,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.central_glmmTMB.beta.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.central_glmmTMB.beta.disp.RData'))
+                ## performance::check_model(mod.central_glmmTMB.beta.disp.rs)
+            }
+            ## ---end
             save(mod.central_glmmTMB.beta.disp.rs, dat.central_glmmTMB.beta.disp.rs, file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.rs.RData'))
         }
     }
@@ -1944,7 +2494,7 @@ models <- c(
     ## ----end
     ## ---- Central.CLMM.tow.ordinal
     {
-        if ('CLMM') {
+        if ('CLMM' %in% models) {
             library(ordinal) 
             manta.tow.central = manta.tow %>%
                 filter(Region=='Central GBR') %>%
@@ -1978,30 +2528,123 @@ models <- c(
     ## ----end
     ## ---- Central.glmmTMB.tow.beta.linear
     {
-        mod.central_glmmTMB.beta.linear <- glmmTMB(Cover ~ REPORT_YEAR + (1|REEF_NAME/REEF_YEAR),
-                                                   data=manta.tow.central,
-                                                   ## weights=dat.all.central$Tows,
-                                                   family=beta_family())
-        dat.central_glmmTMB.beta.linear = emmeans(mod.central_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=unique(manta.tow.central$REPORT_YEAR)), type='response') %>%
-            as.data.frame()
+        if ('glmmTMB.beta.linear' %in% models) {
+            mod.central_glmmTMB.beta.linear <- glmmTMB(Cover ~ REPORT_YEAR + (1|REEF_NAME/REEF_YEAR),
+                                                       data=manta.tow.central,
+                                                       ## weights=dat.all.central$Tows,
+                                                       family=beta_family())
+            dat.central_glmmTMB.beta.linear = emmeans(mod.central_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=unique(manta.tow.central$REPORT_YEAR)), type='response') %>%
+                as.data.frame()
 
-        save(mod.central_glmmTMB.beta.linear, dat.central_glmmTMB.beta.linear, file=paste0('../data/modelled/mod.central_glmmTMB.beta.linear.RData'))
-        load(file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.RData'))
-        dat.central_glmmTMB.beta.linear %>%
-            ggplot() +
-            geom_line(data=dat.central_glmmTMB.beta.disp, aes(y=response, x=as.numeric(as.character(Year))), color='blue') +
-            geom_ribbon(data=dat.central_glmmTMB.beta.disp,aes(ymin=lower.CL, ymax=upper.CL, x=as.numeric(as.character(Year))), fill='lightblue', alpha=0.3) +
-            geom_ribbon(aes(ymin=lower.CL, ymax=upper.CL, x=REPORT_YEAR), fill='orange', alpha=0.5) +
-            geom_line(aes(y=response, x=REPORT_YEAR)) +
-            scale_x_continuous('') +
-            scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
-            theme_classic() +
-            ggtitle('Central GBR')
-
+            save(mod.central_glmmTMB.beta.linear, dat.central_glmmTMB.beta.linear, file=paste0('../data/modelled/mod.central_glmmTMB.beta.linear.RData'))
+            load(file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.RData'))
+            dat.central_glmmTMB.beta.linear %>%
+                ggplot() +
+                geom_line(data=dat.central_glmmTMB.beta.disp, aes(y=response, x=as.numeric(as.character(Year))), color='blue') +
+                geom_ribbon(data=dat.central_glmmTMB.beta.disp,aes(ymin=lower.CL, ymax=upper.CL, x=as.numeric(as.character(Year))), fill='lightblue', alpha=0.3) +
+                geom_ribbon(aes(ymin=lower.CL, ymax=upper.CL, x=REPORT_YEAR), fill='orange', alpha=0.5) +
+                geom_line(aes(y=response, x=REPORT_YEAR)) +
+                scale_x_continuous('') +
+                scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
+                theme_classic() +
+                ggtitle('Central GBR')
+        }
     }
     ## ----end
 
-    ## Compare the models
+    ## Compare models
+    {
+        if (COMPARE_MODELS) {        
+            ## ---- beta.disp
+        {
+            load(file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.RData'))
+            load(file=paste0('../data/modelled/mod.central_glmmTMB.beta.disp.rs.RData'))
+            load(file=paste0('../data/modelled/mod.central_brms.beta.disp.RData'))
+            load(file=paste0('../data/modelled/mod.central_inla.beta.disp.RData'))
+
+            pdf(file = '../output/figures/comparison.central.pdf')
+            g1 <- ggplot() +
+                geom_line(data = dat.central_brms.beta.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'brms')) +
+                geom_ribbon(data = dat.central_brms.beta.disp,
+                            aes(y = response,
+                                ymin = lower.HPD, ymax = upper.HPD,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'brms'),
+                            alpha=0.3) +
+                geom_line(data = dat.central_glmmTMB.beta.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'glmmTMB')) +
+                geom_ribbon(data = dat.central_glmmTMB.beta.disp,
+                            aes(y = response,
+                                ymin = lower.CL, ymax = upper.CL,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'glmmTMB'),
+                            alpha=0.3) + 
+                geom_line(data = dat.central_inla.beta.disp,
+                          aes(y = mean,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'inla')) +
+                geom_ribbon(data = dat.central_inla.beta.disp,
+                            aes(y = mean,
+                                ymin = lower, ymax = upper,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'inla'),
+                            alpha=0.3) 
+            print(g1)
+            dev.off()
+        }
+            ## ----end
+            ## ---- beta.ry.disp
+        {
+            load(file=paste0('../data/modelled/mod.central_glmmTMB.beta.ry.disp.RData'))
+            load(file=paste0('../data/modelled/mod.central_inla.beta.ry.disp.RData'))
+            pdf(file = '../output/figures/comparison.central.ry.pdf')
+            g1 <- ggplot() +
+                ## geom_line(data = dat.central_brms.beta.ry.disp,
+                ##           aes(y = response,
+                ##               x = as.numeric(as.character(Year)),
+                ##               colour = 'brms')) +
+                ## geom_ribbon(data = dat.central_brms.beta.ry.disp,
+                ##             aes(y = response,
+                ##                 ymin = lower.HPD, ymax = upper.HPD,
+                ##                 x = as.numeric(as.character(Year)),
+                ##                 fill = 'brms'),
+                ##             alpha=0.3) +
+                geom_line(data = dat.central_glmmTMB.beta.ry.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'glmmTMB')) +
+                geom_ribbon(data = dat.central_glmmTMB.beta.ry.disp,
+                            aes(y = response,
+                                ymin = lower.CL, ymax = upper.CL,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'glmmTMB'),
+                            alpha=0.3) + 
+                geom_line(data = dat.central_inla.beta.ry.disp,
+                          aes(y = mean,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'inla')) +
+                geom_ribbon(data = dat.central_inla.beta.ry.disp,
+                            aes(y = mean,
+                                ymin = lower, ymax = upper,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'inla'),
+                            alpha=0.3) 
+            print(g1)
+            dev.off()
+        }
+            ## ----end
+
+        }
+
+    }
+
+    if (1==2) {
+        ## Compare the models
     {
         ## ---- Central Compare models
 
@@ -2196,8 +2839,8 @@ models <- c(
 
         rm(list=c('dat.central','mod.central','mod.central_inla_beta','newdata.central','newdata.central_beta', 'mod_central_inla_binomial','newdata.central_binomial'))
     }
-    ## ----end
-    ## ---- junk
+        ## ----end
+        ## ---- junk
     {
         ## summary(mod.central)
         ## dat.central = data.frame(Location='Central',Year=unique(dat.all.central$Year), N=length(unique(dat.all.central$REEF_NAME)))
@@ -2238,10 +2881,11 @@ models <- c(
         ## rm(list=c('last_year','mod.central', 'dat.central', 'coefs', 'Fit'))
         ## gc()
     }
-    ## ----end
+        ## ----end
+    }
 }
 ## ----end
-    
+
 ## Southern
 {
     ## ---- Southern
@@ -2455,7 +3099,8 @@ models <- c(
     ## ---- Southern.glmmTMB.reef.beta
     {
         if ('glmmTMB_reef beta' %in% models) {
-            mod.southern_glmmTMB.reef.beta <- glmmTMB(Cover ~ Year + (1|P_CODE.mod) + (1|REEF_NAME),
+            mod.southern_glmmTMB.reef.beta <- glmmTMB(Cover ~ Year + (1|P_CODE.mod) +
+                                                          (1|REEF_NAME),
                                                       data=dat.all.southern,
                                                       weights=dat.all.southern$Tows,
                                                       family=beta_family())
@@ -2502,7 +3147,7 @@ models <- c(
 
     ## ---- Southern.INLA.tow.beta scaled
     {
-        if ("INLA_tow beta scaled") {
+        if ("INLA_tow beta scaled" %in% models) {
             dat.inla <- dataINLA(dat=manta.tow.southern, level='tow')
             dat = dat.inla[['dat.1']]
             dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
@@ -2537,7 +3182,7 @@ models <- c(
     ## ----end
     ## ---- Southern.INLA.tow.beta
     {
-        if ("INLA_tow beta") {
+        if ("INLA_tow beta" %in% models) {
             dat.inla <- dataINLA(dat=manta.tow.southern, level='tow')
             dat = dat.inla[['dat.1']]
             dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
@@ -2557,6 +3202,94 @@ models <- c(
                                                     n.2=dat.inla[['n.2']], FUN=plogis)
             save(mod.southern_inla.beta, dat.southern_inla.beta, file='../data/modelled/mod.southern_inla.beta.RData')
             rm(list=c('dat.southern_inla.beta', 'mod.southern_inla.beta'))
+            gc()
+        }
+    }
+    ## ----end
+    ## ---- Southern.INLA.tow.beta **
+    {
+        if ("INLA_tow beta disp" %in% models) {
+            dat.inla <- dataINLA(dat=manta.tow.southern, level='tow')
+            dat = dat.inla[['dat.1']]
+            dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+            rawAdd <- ggproto_Raw(dat.cellmeans)
+            dat.scale = manta.tow.southern %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+            ## we will leverage a mixed likelihood model
+            dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+            
+            dd <- dat %>%
+                dplyr::select(Cover, Year, REEF_NAME) %>%
+                mutate(YEAR = Year)%>%
+                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                            names_from = Year,
+                            values_from = Cover)
+            dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(matches("[0-9]{4}")) %>%
+                as.matrix()
+            dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(YEAR, REEF_NAME)
+
+            mod.southern_inla.beta.disp <- inla(form = dd1~YEAR +
+                                               f(REEF_NAME, model='iid'),
+                                           dat=dd2,
+                                           family=rep('beta',ncol(dd1)),
+                                           control.fixed = list(mean = 0, prec = 0.001,
+                                                                mean.intercept = 0.5,
+                                                                prec.intercept = 0.001),
+                                           control.predictor = list(compute = TRUE,
+                                                                    link = 1,
+                                                                    quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                    )
+                                           )
+            dat.southern_inla.beta.disp <- cellMeansINLA(mod=mod.southern_inla.beta.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                    n.2=dat.inla[['n.2']], FUN=plogis)
+            save(mod.southern_inla.beta.disp, dat.southern_inla.beta.disp, file='../data/modelled/mod.southern_inla.beta.disp.RData')
+            rm(list=c('dat.southern_inla.beta.disp', 'mod.southern_inla.beta.disp'))
+            gc()
+        }
+    }
+    ## ----end
+    ## ---- Southern.INLA.tow.ry.beta **
+    {
+        if ("INLA_tow beta ry disp" %in% models) {
+            dat.inla <- dataINLA(dat=manta.tow.southern, level='tow')
+            dat = dat.inla[['dat.1']]
+            dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+            rawAdd <- ggproto_Raw(dat.cellmeans)
+            dat.scale = manta.tow.southern %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+            ## we will leverage a mixed likelihood model
+            dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+            
+            dd <- dat %>%
+                dplyr::select(Cover, Year, REEF_NAME) %>%
+                mutate(YEAR = Year)%>%
+                pivot_wider(id_cols = c(YEAR,REEF_NAME),
+                            names_from = Year,
+                            values_from = Cover)
+            dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(matches("[0-9]{4}")) %>%
+                as.matrix()
+            dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                dplyr::select(YEAR, REEF_NAME)
+
+            mod.southern_inla.beta.ry.disp <- inla(form = dd1~YEAR +
+                                               f(REEF_NAME, model='iid'),
+                                           dat=dd2,
+                                           family=rep('beta',ncol(dd1)),
+                                           control.fixed = list(mean = 0, prec = 0.001,
+                                                                mean.intercept = 0.5,
+                                                                prec.intercept = 0.001),
+                                           control.predictor = list(compute = TRUE,
+                                                                    link = 1,
+                                                                    quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                    )
+                                           )
+            dat.southern_inla.beta.ry.disp <- cellMeansINLA(mod=mod.southern_inla.beta.ry.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                    n.2=dat.inla[['n.2']], FUN=plogis)
+            save(mod.southern_inla.beta.ry.disp, dat.southern_inla.beta.ry.disp, file='../data/modelled/mod.southern_inla.beta.ry.disp.RData')
+            rm(list=c('dat.southern_inla.beta.ry.disp', 'mod.southern_inla.beta.ry.disp'))
             gc()
         }
     }
@@ -2594,9 +3327,14 @@ models <- c(
         }    
     }
     ## ----end
-    ## ---- Southern.BRMS.tow.beta disp
+    ## ---- Southern.BRMS.tow.beta disp **
     {
-        if ('BRMS beta disp' %in% models) {
+        if ('BRMS beta disp' %in% models & 'southern' %in% zone) {
+            priors <- prior(normal(0, 3), class = "b") +
+                prior(normal(0, 3), class = "Intercept") +
+                prior(gamma(2, 1), class = "sd") 
+            ## The above priors where 0,1  0,1  2,1
+            ## might like to try 0,2 0,1.5 2,1
             mod.southern_brms.beta.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME), phi~0+Year),
                                                data=manta.tow.southern,
                                                family=Beta(link='logit'),
@@ -2604,15 +3342,99 @@ models <- c(
                                                warmup=5e3,
                                                thin=5,
                                                chains=4, cores=4,
-                                               prior = prior(normal(0, 3), class = "b") +
-                                                   prior(normal(0, 3), class = "Intercept") +
-                                                   prior(gamma(2, 1), class = "sd") #+
-                                               ## prior(gamma(2, 1), class = "phi")
+                                               prior = priors
+                                               ## prior = prior(normal(0, 3), class = "b") +
+                                               ##     prior(normal(0, 3), class = "Intercept") +
+                                               ##     prior(gamma(2, 1), class = "sd") #+
+                                               ## ## prior(gamma(2, 1), class = "phi")
                                                )
             dat.southern_brms.beta.disp = emmeans(mod.southern_brms.beta.disp, ~Year, type='response') %>%
                 as.data.frame()
+            ## ---- Southern.BRMS.tow.beta disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_southern_brms.beta.disp.pdf')
+                rstan::traceplot(mod.southern_brms.beta.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_southern_brms.beta.disp.pdf')
+                mod.southern_brms.beta.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.southern_brms.beta.disp %>%
+                    posterior_predict(ndraws = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.southern$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_southern_brms.beta.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.southern_brms.beta.disp.RData'))
+            }
+            ## ----end
             save(mod.southern_brms.beta.disp, dat.southern_brms.beta.disp, file=paste0('../data/modelled/mod.southern_brms.beta.disp.RData'))
             rm(list=c('dat.southern_brms.beta.disp', 'mod.southern_brms.beta.disp'))
+            gc()
+        }  
+    }
+    ## ----end
+    ## ---- Southern.BRMS.tow.beta disp **
+    {
+        if ('BRMS beta ry disp' %in% models & 'southern' %in% zone) {
+            priors <- prior(normal(0, 3), class = "b") +
+                prior(normal(0, 3), class = "Intercept") +
+                prior(gamma(2, 1), class = "sd") 
+            ## The above priors where 0,1  0,1  2,1
+            ## might like to try 0,2 0,1.5 2,1
+            mod.southern_brms.beta.ry.disp <- brm(bf(Cover ~ Year + (1|REEF_NAME/REEF_YEAR), phi~0+Year),
+                                               data=manta.tow.southern,
+                                               family=Beta(link='logit'),
+                                               iter=1e4,
+                                               warmup=5e3,
+                                               thin=5,
+                                               chains=4, cores=4,
+                                               prior = priors
+                                               ## prior = prior(normal(0, 3), class = "b") +
+                                               ##     prior(normal(0, 3), class = "Intercept") +
+                                               ##     prior(gamma(2, 1), class = "sd") #+
+                                               ## ## prior(gamma(2, 1), class = "phi")
+                                               )
+            dat.southern_brms.beta.ry.disp = emmeans(mod.southern_brms.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Southern.BRMS.tow.beta ry disp diagnostics
+            {
+                ## sampling diagnostics
+                pdf(file = '../output/figures/traceplots_southern_brms.beta.ry.disp.pdf')
+                rstan::traceplot(mod.southern_brms.beta.ry.disp$fit)
+                dev.off()
+
+                ## density overlay
+                pdf(file = '../output/figures/density_southern_brms.beta.ry.disp.pdf')
+                mod.southern_brms.beta.ry.disp %>% bayesplot::pp_check(type = "dens_overlay", ndraws = 100) 
+                dev.off()
+
+                ## DHARMa residuals
+                preds <- mod.southern_brms.beta.ry.disp %>%
+                    posterior_predict(ndraws = 250, summary = FALSE)
+                mod.resids <- createDHARMa(
+                    simulatedResponse = t(preds),
+                    observedResponse = manta.tow.southern$Cover,
+                    fittedPredictedResponse = apply(preds, 2, median),
+                    integerResponse = FALSE
+                )
+                pdf(file = '../output/figures/DHARMa_southern_brms.beta.ry.disp.pdf')
+                mod.resids %>% plot()
+                dev.off()
+                save(mod.resids, file=paste0('../data/modelled/resids.southern_brms.beta.ry.disp.RData'))
+            }
+            ## ----end
+            save(mod.southern_brms.beta.ry.disp, dat.southern_brms.beta.ry.disp, file=paste0('../data/modelled/mod.southern_brms.beta.ry.disp.RData'))
+            rm(list=c('dat.southern_brms.beta.ry.disp', 'mod.southern_brms.beta.ry.disp'))
             gc()
         }  
     }
@@ -2650,19 +3472,68 @@ models <- c(
         }
     }
     ## ----end
-    ## ---- Southern.glmmTMB.tow.beta disp
+    ## ---- Southern.glmmTMB.tow.beta disp **
     {
-        if ('glmmTMB_tow beta disp' %in% models) {
-            mod.southern_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
+        if ('glmmTMB_tow beta disp' %in% models & 'southern' %in% zone) {
+            cat('Fitting brms disp for Southern\n\n')
+            nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
+            mod.southern_glmmTMB.beta.disp <- glmmTMB(Cover ~ Year + #(1|REEF_NAME/REEF_YEAR),
+                                                          (1|REEF_NAME),
                                                       dispformula = ~Year,
                                                       data=manta.tow.southern,
                                                       ## weights=dat.all.southern$Tows,
-                                                      family=beta_family())
+                                                      family=beta_family(),
+                                                     control = glmmTMBControl(parallel = nt))
             dat.southern_glmmTMB.beta.disp = emmeans(mod.southern_glmmTMB.beta.disp, ~Year, type='response') %>%
                 as.data.frame()
+            ## ---- Southern.glmmTMB.tow.beta disp diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_southern_glmmTMB.beta.disp.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.southern_glmmTMB.beta.disp,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.southern_glmmTMB.beta.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.southern_glmmTMB.beta.disp.RData'))
+            }
+            ## ----end
             ## DHARMa::simulateResiduals(mod.southern_glmmTMB.beta.disp, plot=TRUE)
             ## performance::check_model(mod.southern_glmmTMB.beta.disp)
             save(mod.southern_glmmTMB.beta.disp, dat.southern_glmmTMB.beta.disp, file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.RData'))
+        }
+    }
+    ## ----end
+    ## ---- Southern.glmmTMB.tow.beta ry disp **
+    {
+        if ('glmmTMB_tow beta ry disp' %in% models & 'southern' %in% zone) {
+            cat('Fitting brms ry disp for Southern\n\n')
+            nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
+            mod.southern_glmmTMB.beta.ry.disp <- glmmTMB(Cover ~ Year + (1|REEF_NAME/REEF_YEAR),
+                                                      dispformula = ~Year,
+                                                      data=manta.tow.southern,
+                                                      ## weights=dat.all.southern$Tows,
+                                                      family=beta_family(),
+                                                     control = glmmTMBControl(parallel = nt))
+            dat.southern_glmmTMB.beta.ry.disp = emmeans(mod.southern_glmmTMB.beta.ry.disp, ~Year, type='response') %>%
+                as.data.frame()
+            ## ---- Southern.glmmTMB.tow.beta disp diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_southern_glmmTMB.beta.ry.disp.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.southern_glmmTMB.beta.ry.disp,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.southern_glmmTMB.beta.ry.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.southern_glmmTMB.beta.ry.disp.RData'))
+            }
+            ## ----end
+            ## DHARMa::simulateResiduals(mod.southern_glmmTMB.beta.ry.disp, plot=TRUE)
+            ## performance::check_model(mod.southern_glmmTMB.beta.ry.disp)
+            save(mod.southern_glmmTMB.beta.ry.disp, dat.southern_glmmTMB.beta.ry.disp, file=paste0('../data/modelled/mod.southern_glmmTMB.beta.ry.disp.RData'))
         }
     }
     ## ----end
@@ -2670,6 +3541,7 @@ models <- c(
     {
         if ('glmmTMB_tow beta disp' %in% models) {
             nt <- parallel::detectCores()
+            nt <- ifelse(nt>5, 20, nt)
             mod.southern_glmmTMB.beta.disp.rs <- glmmTMB(Cover ~ Year + (Year|REEF_NAME),
                                                          dispformula = ~Year,
                                                          data=manta.tow.southern,
@@ -2678,8 +3550,20 @@ models <- c(
                                                          control = glmmTMBControl(parallel=nt))
             dat.southern_glmmTMB.beta.disp.rs = emmeans(mod.southern_glmmTMB.beta.disp.rs, ~Year, type='response') %>%
                 as.data.frame()
-            DHARMa::simulateResiduals(mod.southern_glmmTMB.beta.disp.rs, plot=TRUE)
-            performance::check_model(mod.southern_glmmTMB.beta.disp.rs)
+            ## did not converge
+            ## ---- Southern.glmmTMB.tow.beta disp random.effects diagnostics
+            {
+                ## DHARMa residuals
+                pdf(file = '../output/figures/DHARMa_southern_glmmTMB.beta.disp.rs.pdf')
+                mod.resids <- DHARMa::simulateResiduals(mod.southern_glmmTMB.beta.disp.rs,
+                                                       plot=TRUE, integer = TRUE)
+                mod.resids %>% plot()
+                dev.off()
+                ## performance::check_model(mod.southern_glmmTMB.beta.disp)
+                save(mod.resids, file=paste0('../data/modelled/resids.southern_glmmTMB.beta.disp.RData'))
+                ## performance::check_model(mod.southern_glmmTMB.beta.disp.rs)
+            }
+            ## ---end
             save(mod.southern_glmmTMB.beta.disp.rs, dat.southern_glmmTMB.beta.disp.rs, file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.rs.RData'))
         }
     }
@@ -2775,7 +3659,7 @@ models <- c(
     ## ----end
     ## ---- Southern.CLMM.tow.ordinal
     {
-        if ('CLMM') {
+        if ('CLMM' %in% models) {
             library(ordinal) 
             manta.tow.southern = manta.tow %>%
                 filter(Region=='Southern GBR') %>%
@@ -2809,52 +3693,145 @@ models <- c(
     ## ----end
     ## ---- Southern.glmmTMB.tow.beta.linear
     {
-        mod.southern_glmmTMB.beta.linear <- glmmTMB(Cover ~ REPORT_YEAR + (1|REEF_NAME/REEF_YEAR),
-                                                    data=manta.tow.southern,
-                                                    ## weights=dat.all.southern$Tows,
-                                                    family=beta_family())
-        dat.southern_glmmTMB.beta.linear = emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=unique(manta.tow.southern$REPORT_YEAR)), type='response') %>%
-            as.data.frame()
+        if ('glmmTMB.beta.linear' %in% models) {
+            mod.southern_glmmTMB.beta.linear <- glmmTMB(Cover ~ REPORT_YEAR + (1|REEF_NAME/REEF_YEAR),
+                                                        data=manta.tow.southern,
+                                                        ## weights=dat.all.southern$Tows,
+                                                        family=beta_family())
+            dat.southern_glmmTMB.beta.linear = emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=unique(manta.tow.southern$REPORT_YEAR)), type='response') %>%
+                as.data.frame()
 
-        save(mod.southern_glmmTMB.beta.linear, dat.southern_glmmTMB.beta.linear, file=paste0('../data/modelled/mod.southern_glmmTMB.beta.linear.RData'))
-        load(file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.RData'))
-        dat.southern_glmmTMB.beta.linear %>%
-            ggplot() +
-            geom_line(data=dat.southern_glmmTMB.beta.disp, aes(y=response, x=as.numeric(as.character(Year))), color='blue') +
-            geom_ribbon(data=dat.southern_glmmTMB.beta.disp,aes(ymin=lower.CL, ymax=upper.CL, x=as.numeric(as.character(Year))), fill='lightblue', alpha=0.3) +
-            geom_ribbon(aes(ymin=lower.CL, ymax=upper.CL, x=REPORT_YEAR), fill='orange', alpha=0.5) +
-            geom_line(aes(y=response, x=REPORT_YEAR)) +
-            scale_x_continuous('') +
-            scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
-            theme_classic() +
-            ggtitle('Southern GBR')
+            save(mod.southern_glmmTMB.beta.linear, dat.southern_glmmTMB.beta.linear, file=paste0('../data/modelled/mod.southern_glmmTMB.beta.linear.RData'))
+            load(file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.RData'))
+            dat.southern_glmmTMB.beta.linear %>%
+                ggplot() +
+                geom_line(data=dat.southern_glmmTMB.beta.disp, aes(y=response, x=as.numeric(as.character(Year))), color='blue') +
+                geom_ribbon(data=dat.southern_glmmTMB.beta.disp,aes(ymin=lower.CL, ymax=upper.CL, x=as.numeric(as.character(Year))), fill='lightblue', alpha=0.3) +
+                geom_ribbon(aes(ymin=lower.CL, ymax=upper.CL, x=REPORT_YEAR), fill='orange', alpha=0.5) +
+                geom_line(aes(y=response, x=REPORT_YEAR)) +
+                scale_x_continuous('') +
+                scale_y_continuous('Hard coral cover (%)', labels=function(x) x*100) +
+                theme_classic() +
+                ggtitle('Southern GBR')
 
-        emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=c(2000:2002, 2010:2011))) %>%
-            regrid() %>%
-            confint() %>%
-            as.data.frame()
-        ## absolute annual change
-        ## coral cover declines by 0.345 (e.g from 30.446% to 30.102%) 
-        emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=2010:2012)) %>%
-            regrid() %>%
-            pairs(reverse=TRUE) %>%
-            summary(infer=c(TRUE,TRUE)) %>%
-            dplyr::mutate(across(c('estimate',ends_with('.CL')), function(x) x*100))
-        ## confint()
-        ## percentage annual change
-        ## coral cover declines by 1.33% per year.
-        ## this could be as great as a 1.47% decline or as mild as a 0.8% decline
-        emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=2000:2002)) %>%
-            regrid(transform='log') %>%
-            pairs(reverse = TRUE) %>%
-            summary(infer=c(TRUE,TRUE)) %>%
-            dplyr::mutate(across(c('estimate',ends_with('.CL')), function(x) -100*(1-exp(x))))
-        ## confint() %>%
-        ## dplyr::mutate(across(where(is.numeric), exp))
+            emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=c(2000:2002, 2010:2011))) %>%
+                regrid() %>%
+                confint() %>%
+                as.data.frame()
+            ## absolute annual change
+            ## coral cover declines by 0.345 (e.g from 30.446% to 30.102%) 
+            emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=2010:2012)) %>%
+                regrid() %>%
+                pairs(reverse=TRUE) %>%
+                summary(infer=c(TRUE,TRUE)) %>%
+                dplyr::mutate(across(c('estimate',ends_with('.CL')), function(x) x*100))
+            ## confint()
+            ## percentage annual change
+            ## coral cover declines by 1.33% per year.
+            ## this could be as great as a 1.47% decline or as mild as a 0.8% decline
+            emmeans(mod.southern_glmmTMB.beta.linear, ~REPORT_YEAR, at=list(REPORT_YEAR=2000:2002)) %>%
+                regrid(transform='log') %>%
+                pairs(reverse = TRUE) %>%
+                summary(infer=c(TRUE,TRUE)) %>%
+                dplyr::mutate(across(c('estimate',ends_with('.CL')), function(x) -100*(1-exp(x))))
+            ## confint() %>%
+            ## dplyr::mutate(across(where(is.numeric), exp))
+        }
     }
     ## ----end
 
-    ## Compare the models
+    ## Compare models
+    {
+        if (COMPARE_MODELS) {        
+            ## ---- beta.disp
+            {
+            load(file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.RData'))
+            load(file=paste0('../data/modelled/mod.southern_glmmTMB.beta.disp.rs.RData'))
+            load(file=paste0('../data/modelled/mod.southern_brms.beta.disp.RData'))
+            load(file=paste0('../data/modelled/mod.southern_inla.beta.disp.RData'))
+
+            pdf(file = '../output/figures/comparison.southern.pdf')
+            g1 <- ggplot() +
+                geom_line(data = dat.southern_brms.beta.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'brms')) +
+                geom_ribbon(data = dat.southern_brms.beta.disp,
+                            aes(y = response,
+                                ymin = lower.HPD, ymax = upper.HPD,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'brms'),
+                            alpha=0.3) +
+                geom_line(data = dat.southern_glmmTMB.beta.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'glmmTMB')) +
+                geom_ribbon(data = dat.southern_glmmTMB.beta.disp,
+                            aes(y = response,
+                                ymin = lower.CL, ymax = upper.CL,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'glmmTMB'),
+                            alpha=0.3) + 
+                geom_line(data = dat.southern_inla.beta.disp,
+                          aes(y = mean,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'inla')) +
+                geom_ribbon(data = dat.southern_inla.beta.disp,
+                            aes(y = mean,
+                                ymin = lower, ymax = upper,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'inla'),
+                            alpha=0.3) 
+            print(g1)
+            dev.off()
+            }
+            ## ----end
+            ## ---- beta.ry.disp
+            {
+            load(file=paste0('../data/modelled/mod.southern_glmmTMB.beta.ry.disp.RData'))
+            load(file=paste0('../data/modelled/mod.southern_inla.beta.ry.disp.RData'))
+            pdf(file = '../output/figures/comparison.southern.ry.pdf')
+            g1 <- ggplot() +
+                ## geom_line(data = dat.southern_brms.beta.ry.disp,
+                ##           aes(y = response,
+                ##               x = as.numeric(as.character(Year)),
+                ##               colour = 'brms')) +
+                ## geom_ribbon(data = dat.southern_brms.beta.ry.disp,
+                ##             aes(y = response,
+                ##                 ymin = lower.HPD, ymax = upper.HPD,
+                ##                 x = as.numeric(as.character(Year)),
+                ##                 fill = 'brms'),
+                ##             alpha=0.3) +
+                geom_line(data = dat.southern_glmmTMB.beta.ry.disp,
+                          aes(y = response,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'glmmTMB')) +
+                geom_ribbon(data = dat.southern_glmmTMB.beta.ry.disp,
+                            aes(y = response,
+                                ymin = lower.CL, ymax = upper.CL,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'glmmTMB'),
+                            alpha=0.3) + 
+                geom_line(data = dat.southern_inla.beta.ry.disp,
+                          aes(y = mean,
+                              x = as.numeric(as.character(Year)),
+                              colour = 'inla')) +
+                geom_ribbon(data = dat.southern_inla.beta.ry.disp,
+                            aes(y = mean,
+                                ymin = lower, ymax = upper,
+                                x = as.numeric(as.character(Year)),
+                                fill = 'inla'),
+                            alpha=0.3) 
+            print(g1)
+            dev.off()
+            }
+            ## ----end
+
+        }
+    }
+
+    if ( 1 == 2) {
+        ## Compare the models old
     {
         ## ---- Southern Compare models
 
@@ -3049,8 +4026,8 @@ models <- c(
 
         rm(list=c('dat.southern','mod.southern','mod.southern_inla_beta','newdata.southern','newdata.southern_beta', 'mod_southern_inla_binomial','newdata.southern_binomial'))
     }
-    ## ----end
-    ## ---- junk
+        ## ----end
+        ## ---- junk
     {
         ## summary(mod.southern)
         ## dat.southern = data.frame(Location='Southern',Year=unique(dat.all.southern$Year), N=length(unique(dat.all.southern$REEF_NAME)))
@@ -3091,7 +4068,8 @@ models <- c(
         ## rm(list=c('last_year','mod.southern', 'dat.southern', 'coefs', 'Fit'))
         ## gc()
     }
-    ## ----end
+        ## ----end
+    }
 }
 ## ----end
 
