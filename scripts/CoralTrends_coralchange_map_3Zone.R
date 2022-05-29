@@ -4,9 +4,17 @@ CoralTrends_checkPackages()
 source('CoralTrends_config.R')
 
 load('../data/processed/manta.sum.RData')
-load(file='../data/modelled/dat.gbr.RData')
+## load(file='../data/modelled/dat.gbr.RData')
+load(file='../data/modelled/mod.northern_brms.beta.ry.disp.RData')
+load(file='../data/modelled/mod.central_brms.beta.ry.disp.RData')
+load(file='../data/modelled/mod.southern_brms.beta.ry.disp.RData')
+dat.gbr <- rbind(dat.northern_brms.beta.ry.disp,
+                 dat.central_brms.beta.ry.disp,
+                 dat.southern_brms.beta.ry.disp
+                 )
 #load(file='../data/modelled/last_year.RData')
-load(file='../data/modelled/mod.gbr.RData')
+## load(file='../data/modelled/mod.gbr.RData')
+mod.gbr <- NULL
 
 load(file='../data/spatial/whagbr.RData')
 load(file='../data/spatial/whagbr.n.RData')

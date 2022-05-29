@@ -6,7 +6,7 @@ Notes
   - cd Work/AIMS/Annual GBR Coral Report/scripts
   - models were then scp back to my local machine and the figures created locally
   - this was because PNG not supported on the HPC R
-- Using glmmTMB.beta.disp, inla.beta.disp, brm.beta.disp
+- Using glmmTMB.beta.ry.disp, inla.beta.ry.disp, brm.beta.ry.disp
 * older notes
   - annual change over 2 years.  
 	2019 = year 2
