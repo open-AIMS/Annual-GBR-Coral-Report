@@ -92,6 +92,8 @@ source('CoralTrends_temporalHeatMap_3Zone.R')
 ## This needs to be run manually at the moment!
 if (rerun_models) source('CoralTrends_stan_Manta_3Zone.R')
 
+## 2022 - the rest is run locally
+## will need a copy of the entire /data/modelled folder
 
 ############################
 ## Construct trend graphs ##
