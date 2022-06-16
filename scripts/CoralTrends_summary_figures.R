@@ -375,6 +375,9 @@ include_gbr <- FALSE
         save(gg, file=paste0('../data/spatial/threePanels_',model_source,'.RData'))
         ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'), gg, width=15, height=3, units='in',dpi=300) 
         ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), gg, width=15, height=3, units='in',dpi=300) 
+        png(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), width=15, height=3, units='in', res=300)
+        grid.draw(gg)
+        dev.off()
         ## ----end
         ## ---- addWatermark
         library(magick)
@@ -394,8 +397,11 @@ include_gbr <- FALSE
         gg <- with(gg$layout[facets,],
                    gtable_add_grob(gg, ggplotGrob(gt3a),t=t, l=13, b=b, r=14, name="pic_predator"))
         grid.draw(gg)
-        ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'), grid.draw(gg), width=15, height=3.5, units='in',dpi=300) 
-        ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), grid.draw(gg), width=15, height=3.5, units='in',dpi=300) 
+        ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'), gg, width=15, height=3.5, units='in',dpi=300) 
+        ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), gg, width=15, height=3.5, units='in',dpi=300) 
+        png(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), width=15, height=3, units='in', res=300)
+        grid.draw(gg)
+        dev.off()
         ## ----end
 
     }
@@ -445,8 +451,11 @@ include_gbr <- FALSE
         ## ----end
         ## ---- savePlot
         save(gg, file=paste0('../data/spatial/threePanels.Bars_',model_source,'.RData'))
-        ggsave(file=paste0('../output/figures/threePanels.Bars_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'), grid.draw(gg), width=15, height=3, units='in',dpi=300) 
-        ggsave(file=paste0('../output/figures/threePanels.Bars_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), grid.draw(gg), width=15, height=3, units='in',dpi=300) 
+        ggsave(file=paste0('../output/figures/threePanels.Bars_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'), gg, width=15, height=3, units='in',dpi=300) 
+        ggsave(file=paste0('../output/figures/threePanels.Bars_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), gg, width=15, height=3, units='in',dpi=300) 
+        png(file=paste0('../output/figures/threePanels.Bars_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), width=15, height=3, units='in', res=300)
+        grid.draw(gg)
+        dev.off()
         ## ----end
     }
     ## ----end
@@ -458,9 +467,13 @@ if (same_y_axis_range) {
     d <- sym(paste0('dat.northern_', model_source)) %>% eval() %>%
         bind_rows(sym(paste0('dat.central_', model_source)) %>% eval()) %>%
         bind_rows(sym(paste0('dat.southern_', model_source)) %>% eval()) %>%
-        rename(any_of(c(lower.CL = "lower", upper.CL = "upper"))) %>%
-        summarise(y_range_min = min(lower.CL),
-                  y_range_max = max(upper.CL))
+        rename_with(recode, lower.HPD = 'lower', upper.HPD='upper',
+                    lower.CL = 'lower', upper.CL = 'upper',
+                    conf.low = 'lower', conf.high = 'upper',
+                    mean='response', estimate='response') %>%
+        ## rename(any_of(c(lower.CL = "lower", upper.CL = "upper"))) %>%
+        summarise(y_range_min = min(lower),
+                  y_range_max = max(upper))
 }
 ## can also invoke region='GBR' - but only for glmmTMB.beta.disp
 ## for (region in c('GBR','Northern GBR', 'Central GBR', 'Southern GBR')) {
@@ -580,7 +593,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=NA,color='black', size=0.2)  +
         geom_polygon(fill='white', color=hues[4])
     ## Add watermark to the banner
-    ## gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.95,'npc'), y=unit(0.95, 'npc'), vjust=1,width=unit(0.1,'npc')))
+    gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.95,'npc'), y=unit(0.95, 'npc'), vjust=1,width=unit(0.1,'npc')))
 
     g <- ggplot_gtable(ggplot_build(g))
     facets <- grep("strip-t-1-1", g$layout$name)
