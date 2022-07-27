@@ -1636,15 +1636,18 @@ g1
 ## ---- Watermarks
 library(magick)
 library(png)
-a=magick::image_read(path='../parameters/ECM_1280725_v1_AIMS Logo - stacked.jpg') 
+## a=magick::image_read(path='../parameters/ECM_1280725_v1_AIMS Logo - stacked.jpg') 
+a=magick::image_read(path='../parameters/AIMSLogo_Colour_inline.png') 
 
 ## g1 <- g1 + annotation_custom(rasterGrob(a, x=unit(0.92, 'npc'), y=unit(0.55,'npc'), width=unit(0.1, 'npc')))
 g1 <- g1 +
     annotation_custom(rasterGrob(a,
-                                 x=unit(0.91, 'npc'),
+                                 ## x=unit(0.91, 'npc'),
+                                 x=unit(0.89, 'npc'),
                                  y=unit(0.65, 'npc'),
                                  vjust = 1,
-                                 width=unit(0.1, 'npc')))
+                                 ## width=unit(0.1, 'npc')))
+                                 width=unit(0.2, 'npc')))
 g1
 
 ## a=magick::image_read(path='../parameters/main_logo.png') 
