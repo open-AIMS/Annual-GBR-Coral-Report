@@ -402,6 +402,30 @@ include_gbr <- FALSE
         png(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), width=15, height=3, units='in', res=300)
         grid.draw(gg)
         dev.off()
+
+        ## In 2022, Comms insisted on a different logo for the
+        ## watermark Unfortunately, it no longer fits in the strip.
+        ## They also wanted it washed out
+        a=magick::image_read(path='../parameters/AIMSLogo_Colour_inline.png') #%>%
+
+        a <- a %>% magick::image_colorize(opacity = 50, color = "white") 
+        g1b <- g1 + annotation_custom(rasterGrob(a, x=unit(0.05,'npc'), y=unit(0.3, 'npc'), vjust=1, hjust = 0, width=unit(0.4,'npc')))
+        gT <- ggplot_gtable(ggplot_build(g1b))
+        facets <- grep("strip-t-1-1", gT$layout$name)
+        gg <- with(gT$layout[facets,],
+                   gtable_add_grob(gT, ggplotGrob(gt2),t=t, l=5, b=b, r=6, name="pic_predator"))
+        facets <- grep("strip-t-2-1", gT$layout$name)
+        gg <- with(gg$layout[facets,],
+                   gtable_add_grob(gg, ggplotGrob(gt3),t=t, l=9, b=b, r=10, name="pic_predator"))
+        facets <- grep("strip-t-3-1", gT$layout$name)
+        gg <- with(gg$layout[facets,],
+                   gtable_add_grob(gg, ggplotGrob(gt4),t=t, l=13, b=b, r=14, name="pic_predator"))
+        grid.draw(gg)
+        ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'), gg, width=15, height=3.5, units='in',dpi=300) 
+        ggsave(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), gg, width=15, height=3.5, units='in',dpi=300) 
+        png(file=paste0('../output/figures/threePanels_',model_source,'_',ifelse(include_n,'with_n',''),'.png'), width=15, height=3.5, units='in', res=300)
+        grid.draw(gg)
+        dev.off()
         ## ----end
 
     }
@@ -531,7 +555,8 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
               panel.grid.major=element_line(size=0.1,color='gray70'),
               panel.grid.minor.x=element_line(size=0,color='white',linetype=NULL),
               panel.grid.major.x=element_line(size=0,color='white',linetype=NULL),
-              strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+              ## strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+              strip.text=element_text(margin=margin(t=1, b=1, r=10, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
     if (include_n)
         g <- g + geom_text(data=nd1, aes(y=0.50,x=Year, label=N), vjust=1.2)
     if (same_y_axis_range)
@@ -548,7 +573,63 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         geom_polygon(fill='white', color=hues[4])
     ## Add watermark to the banner
     gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.95,'npc'), y=unit(0.95, 'npc'), vjust=1,width=unit(0.1,'npc')))
+
+    g <- ggplot_gtable(ggplot_build(g))
+    facets <- grep("strip-t-1-1", g$layout$name)
+    gg <- with(g$layout[facets,],
+                        gtable_add_grob(g, ggplotGrob(gt2),t=t, l=5, b=b, r=6, name="pic_predator"))
+
+    grid.draw(gg)
+
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.png'),
+           gg, width=5, height=3.5, units='in',dpi=300)
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'),
+           gg, width=5, height=3.5, units='in',dpi=300)
+    ## ----end
+
+    ## ---- PlotWithRibbons new logo
+    g <- dat %>%
+        ggplot(aes(y=response, x=as.numeric(as.character(Year))))+
+        geom_blank(aes(y=0.10,x=1995))+geom_blank(aes(y=0.35,x=1995))+
+        facet_wrap(~Region, nrow=1, scales='fixed',
+                   labeller=labeller(Location=setNames(paste0("\n", levels(newdata$Region),"\n"), levels(newdata$Region))))+
+        geom_blank()+
+        geom_ribbon(aes(ymin=lower, ymax=upper),fill=hues[2])+
+        geom_line(aes(x=as.numeric(as.character(Year))), color='blue') +
+        scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100) +
+        scale_x_continuous('',breaks=seq(1985,final_year_seq,by=5), limits=c(1985,final_year))+
+        theme_classic()+
+        theme(strip.background=element_rect(fill=hues[2], color='black', size=0.5),
+              panel.background=element_rect(color='black'),
+              plot.margin = margin(t=2,r=7,b=0,l=0),
+              axis.title.y=element_text(size=rel(1.5), margin=margin(r=1,unit='lines')),
+              axis.text.x=element_text(size=rel(1.2)),
+              axis.text.y=element_text(size=rel(1.2)),
+              panel.grid.minor=element_line(size=0.1,color='gray70'),
+              panel.grid.major=element_line(size=0.1,color='gray70'),
+              panel.grid.minor.x=element_line(size=0,color='white',linetype=NULL),
+              panel.grid.major.x=element_line(size=0,color='white',linetype=NULL),
+              ## strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+              strip.text=element_text(margin=margin(t=1, b=1, r=5, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+    if (include_n)
+        g <- g + geom_text(data=nd1, aes(y=0.50,x=Year, label=N), vjust=1.2)
+    if (same_y_axis_range)
+        g <- g + scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100, limits = c(0,0.5), expand = c(0,0)) 
+    g
+
+    ## Now with the new logo
+    library(magick)
+    library(png)
+    a=magick::image_read(path='../parameters/AIMSLogo_Colour_inline.png') #%>%
+    ## a <- a %>% magick::image_colorize(opacity = 50, color = "white") 
+
+    gt2=gt+geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=hues[4],color=NA)+
+        geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=NA,color='black', size=0.2)  +
+        geom_polygon(fill='white', color=hues[4])
     
+    gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.85,'npc'), y=unit(0.9, 'npc'), vjust=1,width=unit(0.3,'npc')))
+    ## g1b <- g1 + annotation_custom(rasterGrob(a, x=unit(0.05,'npc'), y=unit(0.3, 'npc'), vjust=1, hjust = 0, width=unit(0.4,'npc')))
+
     g <- ggplot_gtable(ggplot_build(g))
     facets <- grep("strip-t-1-1", g$layout$name)
     gg <- with(g$layout[facets,],
@@ -584,7 +665,8 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
               panel.grid.major=element_line(size=0.1,color='gray70'),
               panel.grid.minor.x=element_line(size=0,color='white',linetype=NULL),
               panel.grid.major.x=element_line(size=0,color='white',linetype=NULL),
-              strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+              ## strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+              strip.text=element_text(margin=margin(t=1, b=1, r=5, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
     if (include_n)
         g <- g + geom_text(data=nd1, aes(y=0.50,x=Year, label=N), vjust=1.2)
     g
@@ -593,7 +675,8 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=NA,color='black', size=0.2)  +
         geom_polygon(fill='white', color=hues[4])
     ## Add watermark to the banner
-    gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.95,'npc'), y=unit(0.95, 'npc'), vjust=1,width=unit(0.1,'npc')))
+    ## gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.95,'npc'), y=unit(0.95, 'npc'), vjust=1,width=unit(0.1,'npc')))
+    gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.85,'npc'), y=unit(0.9, 'npc'), vjust=1,width=unit(0.3,'npc')))
 
     g <- ggplot_gtable(ggplot_build(g))
     facets <- grep("strip-t-1-1", g$layout$name)
