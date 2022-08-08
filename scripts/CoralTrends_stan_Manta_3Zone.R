@@ -101,6 +101,52 @@ if ( 1 == 2) {
         }
         ## ----end
 
+        ## ---- GBR.INLA.tow.ry.beta **
+        {
+            if ("INLA_tow beta ry disp" %in% models) {
+                dat.inla <- dataINLA(dat=manta.tow.gbr, level='tow')
+                dat = dat.inla[['dat.1']]
+                dat.cellmeans <- cellMeansRaw(dat %>% mutate(Tows=1) %>% filter(!is.na(Cover)))
+                rawAdd <- ggproto_Raw(dat.cellmeans)
+                dat.scale = manta.tow.gbr %>% group_by(REEF_NAME, REPORT_YEAR) %>%
+                    summarise(Tows=length(TOW_SEQ_NO)) %>% ungroup %>% group_by(REEF_NAME) %>% summarise(Tows=max(Tows))
+                ## we will leverage a mixed likelihood model
+                dat = dat %>% mutate(REEF_YEAR = interaction(REEF_NAME, Year))
+                
+                dd <- dat %>%
+                    dplyr::select(Cover, Year, REEF_NAME, REEF_YEAR) %>%
+                    mutate(YEAR = Year)%>%
+                    pivot_wider(id_cols = c(YEAR,REEF_NAME, REEF_YEAR),
+                                names_from = Year,
+                                values_from = Cover)
+                dd1 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                    dplyr::select(matches("[0-9]{4}")) %>%
+                    as.matrix()
+                dd2 <- dd %>% unnest(matches("[0-9]{4}")) %>%
+                    dplyr::select(YEAR, REEF_NAME, REEF_YEAR)
+
+                mod.gbr_inla.beta.ry.disp <- inla(form = dd1~YEAR +
+                                                           f(REEF_NAME, model='iid') +
+                                                           f(REEF_YEAR, model='iid'),
+                                                       dat=dd2,
+                                                       family=rep('beta',ncol(dd1)),
+                                                       control.fixed = list(mean = 0, prec = 0.001,
+                                                                            mean.intercept = 0.5,
+                                                                            prec.intercept = 0.001),
+                                                       control.predictor = list(compute = TRUE,
+                                                                                link = 1,
+                                                                                quantiles = c(0.025,0.25,0.5,0.75,0.975)
+                                                                                )
+                                                       )
+                dat.gbr_inla.beta.ry.disp <- cellMeansINLA(mod=mod.gbr_inla.beta.ry.disp, newdata.hcc=dat.inla[['newdata.hcc']],
+                                                                n.2=dat.inla[['n.2']], FUN=plogis)
+                save(mod.gbr_inla.beta.ry.disp, dat.gbr_inla.beta.ry.disp, file='../data/modelled/mod.gbr_inla.beta.ry.disp.RData')
+                save(dat.gbr_inla.beta.ry.disp, file='../data/modelled/dat.gbr_inla.beta.ry.disp.RData')
+                rm(list=c('dat.gbr_inla.beta.ry.disp', 'mod.gbr_inla.beta.ry.disp'))
+                gc()
+            }
+        }
+        ## ----end
         ## ---- GBR.glmmTMB.tow.beta disp
         {
             if ('glmmTMB_tow beta disp' %in% models) {
