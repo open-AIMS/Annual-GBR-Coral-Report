@@ -1239,6 +1239,7 @@ if ( 1 == 2) {
                 ## performance::check_model(mod.northern_glmmTMB.beta.ry.disp)
                 save(mod.resids, file=paste0('../data/modelled/resids.northern_glmmTMB.beta.ry.disp.RData'))
             }
+            ## ----end
             save(mod.northern_glmmTMB.beta.ry.disp, dat.northern_glmmTMB.beta.ry.disp,
                  file=paste0('../data/modelled/mod.northern_glmmTMB.beta.ry.disp.RData'))
         }
@@ -1268,6 +1269,7 @@ if ( 1 == 2) {
                 ## performance::check_model(mod.northern_glmmTMB.beta.disp)
                 save(mod.resids, file=paste0('../data/modelled/resids.northern_glmmTMB.beta.disp.RData'))
             }
+            ## ----end
             save(mod.northern_glmmTMB.beta.disp, dat.northern_glmmTMB.beta.disp,
                  file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.RData'))
         }
@@ -1297,6 +1299,7 @@ if ( 1 == 2) {
                 ## performance::check_model(mod.northern_glmmTMB.beta.disp)
                 save(mod.resids, file=paste0('../data/modelled/resids.northern_glmmTMB.beta.disp.RData'))
                 ## performance::check_model(mod.northern_glmmTMB.beta.disp.rs)
+                ## ----end
             }
             save(mod.northern_glmmTMB.beta.disp.rs, dat.northern_glmmTMB.beta.disp.rs, file=paste0('../data/modelled/mod.northern_glmmTMB.beta.disp.rs.RData'))
         }
