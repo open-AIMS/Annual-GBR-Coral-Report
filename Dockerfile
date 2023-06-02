@@ -121,8 +121,7 @@ RUN R -e "options(repos = \
 RUN mkdir ~/Project
 
 ## Copy scripts and parameters (folders and contents) into docker image project directory
-COPY R/ ~/Project/R/ 
-COPY docs/ ~/Project/docs/ 
+COPY scripts/ ~/Project/scripts/ 
 WORKDIR ~/Project/ 
 
 ## ENTRYPOINT ["make", "-i","all"]
