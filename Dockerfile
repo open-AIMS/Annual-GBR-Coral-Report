@@ -117,6 +117,11 @@ RUN R -e "options(repos = \
     install.packages('rgdal'); \ 
 "
 
+RUN R -e "options(repos = \ 
+    list(CRAN = 'http://mran.revolutionanalytics.com/snapshot/2022-10-04/'));\ 
+    install.packages('rstanarm'); \     
+"
+
 ## Create project directory in docker image 
 RUN mkdir ~/Project
 
