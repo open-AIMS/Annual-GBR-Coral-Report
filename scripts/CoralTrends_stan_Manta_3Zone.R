@@ -42,9 +42,9 @@ models <- c(
     ##'BRMS ordinal'
 )
 zone <- c(
-    'northern'#,
+    ## 'northern'#,
     #'central'#,
-    #'southern'
+    'southern'
 )
 COMPARE_MODELS <- FALSE
 ## Fit stan models===================================================================

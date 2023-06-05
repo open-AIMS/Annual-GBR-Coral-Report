@@ -120,6 +120,8 @@ RUN R -e "options(repos = \
 RUN R -e "options(repos = \ 
     list(CRAN = 'http://mran.revolutionanalytics.com/snapshot/2022-10-04/'));\ 
     install.packages('rstanarm'); \     
+    install.packages('oz'); \     
+    install.packages('magick'); \     
 "
 
 ## Create project directory in docker image 
