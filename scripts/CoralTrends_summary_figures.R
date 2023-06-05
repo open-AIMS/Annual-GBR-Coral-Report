@@ -137,7 +137,7 @@ final_year_seq <- mceiling(final_year,5)
         nest() %>%
         mutate(Mean=map_dbl(data, ~mean(.x$Cover)),
                Median=map_dbl(data, ~median(.x$Cover)),
-               Logis=map_dbl(data, ~.x$Cover %>% logit %>% mean %>% plogis),
+               Logis=map_dbl(data, ~.x$Cover %>% gtools::logit() %>% mean() %>% plogis()),
                Beta=map_dbl(data, ~bfun(.x)) 
                ) %>%
         dplyr::select(-data) %>%
@@ -153,7 +153,7 @@ final_year_seq <- mceiling(final_year,5)
         nest() %>%
         mutate(Mean=map_dbl(data, ~mean(.x$Cover)),
                Median=map_dbl(data, ~median(.x$Cover)),
-               Logis=map_dbl(data, ~.x$Cover %>% logit %>% mean %>% plogis),
+               Logis=map_dbl(data, ~.x$Cover %>% gtools::logit() %>% mean() %>% plogis()),
                Beta=map_dbl(data, ~bfun(.x)) 
                ) %>%
         dplyr::select(-data) %>%
@@ -168,7 +168,7 @@ final_year_seq <- mceiling(final_year,5)
         nest() %>%
         mutate(Mean=map_dbl(data, ~mean(.x$Cover)),
                Median=map_dbl(data, ~median(.x$Cover)),
-               Logis=map_dbl(data, ~.x$Cover %>% logit %>% mean %>% plogis),
+               Logis=map_dbl(data, ~.x$Cover %>% gtools::logit() %>% mean() %>% plogis()),
                Beta=map_dbl(data, ~bfun(.x)) 
                ) %>%
         dplyr::select(-data) %>%
@@ -184,7 +184,7 @@ final_year_seq <- mceiling(final_year,5)
         nest() %>%
         mutate(Mean=map_dbl(data, ~mean(.x$Cover)),
                Median=map_dbl(data, ~median(.x$Cover)),
-               Logis=map_dbl(data, ~.x$Cover %>% logit %>% mean %>% plogis),
+               Logis=map_dbl(data, ~.x$Cover %>% gtools::logit() %>% mean() %>% plogis()),
                Beta=map_dbl(data, ~bfun(.x)) 
                ) %>%
         dplyr::select(-data) %>%
@@ -943,7 +943,7 @@ manta.stats <- manta.tow %>%
     nest() %>%
     mutate(Mean=map_dbl(data, ~mean(.x$Cover)),
            Median=map_dbl(data, ~median(.x$Cover)),
-           Logis=map_dbl(data, ~.x$Cover %>% logit %>% mean %>% plogis),
+           Logis=map_dbl(data, ~.x$Cover %>% gtools::logit() %>% mean() %>% plogis()),
            Beta=map_dbl(data, ~ betareg::betareg(Cover ~ 1, data=.x) %>% coef() %>% `[[`(1) %>% plogis())
            ) %>%
     dplyr::select(-data) %>%
@@ -982,7 +982,7 @@ manta.stats <- manta.tow %>%
     nest() %>%
     mutate(Mean=map_dbl(data, ~mean(.x$Cover)),
            Median=map_dbl(data, ~median(.x$Cover)),
-           Logis=map_dbl(data, ~.x$Cover %>% logit %>% mean %>% plogis),
+           Logis=map_dbl(data, ~.x$Cover %>% gtools::logit() %>% mean() %>% plogis()),
            Beta=map_dbl(data, ~bfun(.x)) 
            ) %>%
     dplyr::select(-data) %>%
