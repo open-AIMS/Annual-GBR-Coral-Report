@@ -117,6 +117,11 @@ RUN R -e "options(repos = \
     install.packages('rgdal'); \ 
 "
 
+RUN apt-get update \ 
+  && apt-get install -y --no-install-recommends \ 
+    libmagick++-dev \ 
+  && rm -rf /var/lib/apt/lists/* 
+
 RUN R -e "install.packages('rstanarm'); \     
     install.packages('magick'); \ 
     install.packages('oz'); \     

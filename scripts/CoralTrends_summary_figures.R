@@ -781,20 +781,19 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         geom_ribbon(aes(ymin=lower, ymax=upper),fill="#9ccbed")+
         geom_line(aes(x=as.numeric(as.character(Year))), color='#004785') +
         scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100) +
-        scale_x_continuous('',breaks=seq(1985,final_year_seq,by=5), limits=c(1985,final_year))+
-        theme_classic(base_family = "Arial")+
-        theme(strip.background=element_rect(fill="white", color='black', size=0.5),
+        scale_x_continuous('',breaks=c(seq(1985,final_year_seq,by=5), final_year), limits=c(1985,final_year))+
+        theme_classic(base_family = "Arial", base_size = 12)+
+        theme(strip.background=element_rect(fill="white", color='white', size=0.5),
               panel.background=element_rect(color='black'),
               plot.margin = margin(t=2,r=7,b=0,l=0),
-              axis.title.y=element_text(size=rel(1.5), margin=margin(r=1,unit='lines')),
-              axis.text.x=element_text(size=rel(1.2)),
-              axis.text.y=element_text(size=rel(1.2)),
+              axis.title.y=element_text(size=rel(1.5), margin=margin(r=0.5,unit='lines')),
+              axis.text.x=element_text(size=rel(1.5)),
+              axis.text.y=element_text(size=rel(1.5)),
               panel.grid.minor=element_line(size=0.1,color='gray70'),
               panel.grid.major=element_line(size=0.1,color='gray70'),
               panel.grid.minor.x=element_line(size=0,color='white',linetype=NULL),
               panel.grid.major.x=element_line(size=0,color='white',linetype=NULL),
-              ## strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
-              strip.text=element_text(margin=margin(t=1, b=1, r=5, unit='lines'),
+              strip.text=element_text(margin=margin(t=4, b=1, r=5, unit='lines'),
                                       size=0,lineheight=0.5,
                                       colour = "#004785",
                                       face='bold',
@@ -804,78 +803,93 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         g <- g + geom_text(data=nd1, aes(y=0.50,x=Year, label=N), vjust=1.2)
     if (same_y_axis_range)
         g <- g +
-            ##coord_cartesian(ylim = c(0, 0.5), expand = FALSE)
-            scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100, limits = c(0,0.5), expand = c(0,0)) 
-
-
-    ## annotate_npc_abs <- function(label, x, y, ...) 
-    ## {
-    ##     grid::grid.draw(grid::textGrob(
-    ##                               label, x = unit(x, "npc"), y = unit(y, "npc"), ...))
-    ## }
-    ## g<- g + annotate_npc_abs("hello", x = 0.1, y = 0.95)
-    ## annotate_npc <- function(label, x, y, ...)
-    ## {
-    ##     ggplot2::annotation_custom(grid::textGrob(
-    ##                                          x = unit(x, "npc"), y = unit(y, "npc"), label = label, ...))
-    ## } 
-    ## g<- g + coord_cartesian(clip = "off") + annotate_npc("hello", x = 0.1, y = 1.01)
-
-    ## g <- g +
-    ##     annotation_custom(grid::textGrob("Hello", x = unit(0.1, "npc"), y = unit(1, "npc"))) +
-    ##     annotate(geom = "line", x = 2000:2001, y = c(0.4, 0.6))
-    
-    g
+            scale_y_continuous(expression(Coral~cover~('%')),
+                               labels=function(x) x*100,
+                               limits = c(0,0.5),
+                               expand = c(0,0)) 
 
     ## Now with the new logo
     library(magick)
     library(png)
     a=magick::image_read(path='../parameters/AIMSLogo_Colour_inline.png') #%>%
-    ## a <- a %>% magick::image_colorize(opacity = 50, color = "white") 
-
-    ## gt2=gt+geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=hues[4],color=NA)+
-    ##     geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=NA,color='black', size=0.2)  +
-    ##     geom_polygon(fill='white', color=hues[4])
 
     g <- ggplot_gtable(ggplot_build(g))
     facets <- grep("strip-t-1-1", g$layout$name)
-    rG <- rasterGrob(a, x=unit(0.85,'npc'), y=unit(0.9, 'npc'), vjust=1,width=unit(0.3,'npc'))
+
     tG <- textGrob("Northern Great Barrier Reef",
-                   x = unit(0.05, "npc"),
+                   x = unit(0, "npc"),
                    y = unit(1, "npc"),
-                   vjust = 0.5, hjust = 0,
-                   gp = gpar(fontsize = 15,
+                   vjust = 0, hjust = 0,
+                   gp = gpar(fontsize = 30,
                              fontfamily = "Arial",
+                             fontface = "bold",
                              col = "#004785"))
-    tG2 <- textGrob("Cape Yolk to Cooktown",
-                   x = unit(0.05, "npc"),
-                   y = unit(0.5, "npc"),
-                   vjust = 0.5, hjust = 0,
-                   gp = gpar(fontsize = 10,
-                             fontfamily = "Arial",
-                             col = "#444040"))
-    ## gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.85,'npc'), y=unit(0.9, 'npc'), vjust=1,width=unit(0.3,'npc')))
-    ## g1b <- g1 + annotation_custom(rasterGrob(a, x=unit(0.05,'npc'), y=unit(0.3, 'npc'), vjust=1, hjust = 0, width=unit(0.4,'npc')))
-
-    ## gg <- with(g$layout[facets,],
-    ##                     gtable_add_grob(g, list(rG),t=t, l=5, b=b, r=6, name="pic_predator"))
-    ## gg <- with(g$layout[facets,],
-    ##                     gtable_add_grob(gg, list(tG, tG2),t=t, l=5, b=b, r=6, name="pic_predator"))
     gg <- with(g$layout[facets,],
-                        gtable_add_grob(g, arrangeGrob(rG, tG, tG2, padding = unit(0.01, "line")),t=t, l=5, b=b, r=6, name="pic_predator"))
-    ggsave("a.png", gg, width = 5, height = 3.5, units = 'in')
+               gtable_add_grob(g, arrangeGrob(tG, padding = unit(0, "line"),
+                                              vp = viewport(x = 1, y = -0.5, width = 1,
+                                                            just = c("right", "bottom"))),
+                               t=t, l=l, b=b, r=l, name="pic_predator1"))
+    tG2 <- textGrob("Cape Yolk to Cooktown",
+                   x = unit(0, "npc"),
+                   y = unit(1, "npc"),
+                   vjust = 0, hjust = 0,
+                   gp = gpar(fontsize = 20,
+                             fontfamily = "Arial",
+                             fontface = "bold",
+                             col = "#444040"))
+    gg <- with(g$layout[facets,],
+               gtable_add_grob(gg, arrangeGrob(tG2, padding = unit(0, "line"),
+                                              vp = viewport(x = 1, y = -0.8, width = 1,
+                                                            just = c("right", "bottom"))),
+                               t=t, l=l, b=b, r=l, name="pic_predator2"))
+    
+    rG <- rasterGrob(a, x=unit(0,'npc'), y=unit(0, 'npc'), hjust = 0, vjust=0,width=unit(1,'npc'))
+    gg_with_logo <- with(g$layout[facets,],
+               gtable_add_grob(gg, arrangeGrob(rG, padding = unit(0, "line"),
+                                              vp = viewport(x = 1, y = 0, width = 0.3,
+                                                            just = c("right", "bottom"))),
+                               t=t, l=l, b=b, r=l, name="pic_predator"))
+    ## grid.newpage()
+    ## grid.draw(gg)
+    ggsave("a.pdf", gg_with_logo, device = cairo_pdf, width = 801, height = 535, units = 'px', dpi = 85)
+    ggsave("b.pdf", gg_with_logo, device = cairo_pdf, width = 801, height = 535, units = 'px', dpi = 100)
+    ggsave("a.png", gg_with_logo, width = 801, height = 535, units = 'px', dpi = 100)
 
-    ## gg <- with(g$layout[facets,],
-    ##                     gtable_add_grob(g, ggplotGrob(gt2),t=t, l=5, b=b, r=6, name="pic_predator"))
-
-    grid.draw(gg)
-
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.png'),
-           gg, width=5, height=3.5, units='in',dpi=300)
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'),
-           gg, width=5, height=3.5, units='in',dpi=300)
+    
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
+                       ifelse(include_n,'with_n',''), '_withLogo.png'),
+           gg_with_logo,
+           device = cairo_pdf,
+           width=801, height=535,
+           units='in',dpi=300)
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'_withLogo.pdf'),
+           gg_with_logo,
+           device = cairo_pdf,
+           width=801, height=535,
+           units='in', dpi=300)
+    
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
+                       ifelse(include_n,'with_n',''), '_withoutLogo.png'),
+           gg,
+           device = cairo_pdf,
+           width=801, height=535,
+           units='in',dpi=300)
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'_withoutLogo.pdf'),
+           gg,
+           device = cairo_pdf,
+           width=801, height=535,
+           units='in', dpi=300)
+    
+    save(gg, gg_with_logo, file = paste0('../output/figures/manta.',region,'_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'.RData'))
+         
+    ## ----end
+    ## ---- three in a line
 
     ## ----end
+
 }
 ## ----end
 
