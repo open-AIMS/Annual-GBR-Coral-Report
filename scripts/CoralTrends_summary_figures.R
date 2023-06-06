@@ -693,6 +693,193 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
 }
 ## ----end
 
+## ---- 2023 versions
+dat.northern <- sym(paste0('dat.northern_',model_source))
+dat.central <- sym(paste0('dat.central_',model_source))
+dat.southern <- sym(paste0('dat.southern_',model_source))
+
+newdata =
+                                        #dat.gbr %>% eval %>% mutate(Region='GBR') %>%
+                                        #rbind(dat.northern %>% eval %>% mutate(Region='Northern GBR')) %>%
+    dat.northern %>% eval %>% mutate(Region='Northern GBR') %>%
+    rbind(dat.central %>% eval %>% mutate(Region='Central GBR')) %>%
+    rbind(dat.southern %>% eval %>% mutate(Region='Southern GBR')) %>%
+    mutate(Region=factor(Region, levels=unique(Region))) %>%
+    rename_with(recode, lower.HPD = 'lower', upper.HPD='upper',
+                lower.CL = 'lower', upper.CL = 'upper',
+                conf.low = 'lower', conf.high = 'upper',
+                mean='response', estimate='response') 
+if (!include_gbr) newdata <- newdata %>% filter(Region!='GBR') %>% droplevels()
+same_y_axis_range <- TRUE
+if (same_y_axis_range) {
+    d <- sym(paste0('dat.northern_', model_source)) %>% eval() %>%
+        bind_rows(sym(paste0('dat.central_', model_source)) %>% eval()) %>%
+        bind_rows(sym(paste0('dat.southern_', model_source)) %>% eval()) %>%
+        rename_with(recode, lower.HPD = 'lower', upper.HPD='upper',
+                    lower.CL = 'lower', upper.CL = 'upper',
+                    conf.low = 'lower', conf.high = 'upper',
+                    mean='response', estimate='response') %>%
+        ## rename(any_of(c(lower.CL = "lower", upper.CL = "upper"))) %>%
+        summarise(y_range_min = min(lower),
+                  y_range_max = max(upper))
+}
+## can also invoke region='GBR' - but only for glmmTMB.beta.disp
+## for (region in c('GBR','Northern GBR', 'Central GBR', 'Southern GBR')) {
+
+for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
+    ## ---- prepareData
+    nd1 <- nd %>% filter(Region==region)
+    ## if (region=='GBR') nd1 <- manta.tow %>% summarise(Year=mean(range(as.numeric(as.character(Year)))),
+    ##                                                   N=paste0('N=', length(unique(REEF_NAME))))
+    reg <- dplyr::case_when(
+                      ## region == 'GBR' ~ 'dat.gbr',
+                      region == 'Northern GBR' ~ 'dat.northern',
+                      region == 'Central GBR' ~'dat.central',
+                      region == 'Southern GBR' ~ 'dat.southern')
+    reg.shp <- dplyr::case_when(
+                          ## region == 'GBR' ~ 'whagbr',
+                          region == 'Northern GBR' ~ 'whagbr.n',
+                          region == 'Central GBR' ~ 'whagbr.c',
+                          region == 'Southern GBR' ~ 'whagbr.s'
+                      ) %>%
+        sym() %>%
+        eval()
+    dat <- sym(paste0(reg,'_',model_source)) %>% eval() %>%
+        mutate(Region=region) %>%
+        rename_with(recode, lower.HPD='lower', upper.HPD='upper',
+                    lower.CL='lower', upper.CL='upper',
+                    conf.low='lower', conf.high='upper',
+                    mean='response', estimate='response')
+    FILENAME=paste0('../data/modelled/modelled.gbr.',model_source, '_', region)
+    write_csv(dat, file=paste0(FILENAME,'.csv'))
+    ## JS
+    sink(paste0(FILENAME, '.js'))
+    dat %>% send_df_to_js("data")
+    sink()  
+
+    headings_lookup <- tribble(
+        ~Region,        ~Heading,                      ~Subheading,   
+        "Northern GBR", "Northern Great Barrier Reef", "Cape York to Cooktown",
+        "Central GBR",  "Central Great Barrier Reef",  "Cooktown to Proserpine",
+        "Southern GBR", "Southern Great Barrier Reef", "Proserpine to Gladstone",
+        )
+    fonts_lookup <- tribble(
+        ~Heading,        ~Font,   ~FontSize, ~FontColour,
+        "Level 1",       "Arial", 30,        "#004785",
+        "Level 2",       "Arial", 20,        "444040" 
+        )
+    dat <- dat %>% left_join(headings_lookup)
+    ## ----end
+    ## ---- PlotWithRibbons new logo
+
+    g <- dat %>%
+        ggplot(aes(y=response, x=as.numeric(as.character(Year))))+
+        geom_blank(aes(y=0.10,x=1995))+geom_blank(aes(y=0.35,x=1995))+
+        facet_wrap(~Heading, nrow=1, scales='fixed',
+                   labeller=labeller(Location=setNames(paste0("\n", levels(newdata$Region),"\n"), levels(newdata$Region))))+
+        geom_blank()+
+        geom_ribbon(aes(ymin=lower, ymax=upper),fill="#9ccbed")+
+        geom_line(aes(x=as.numeric(as.character(Year))), color='#004785') +
+        scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100) +
+        scale_x_continuous('',breaks=seq(1985,final_year_seq,by=5), limits=c(1985,final_year))+
+        theme_classic(base_family = "Arial")+
+        theme(strip.background=element_rect(fill="white", color='black', size=0.5),
+              panel.background=element_rect(color='black'),
+              plot.margin = margin(t=2,r=7,b=0,l=0),
+              axis.title.y=element_text(size=rel(1.5), margin=margin(r=1,unit='lines')),
+              axis.text.x=element_text(size=rel(1.2)),
+              axis.text.y=element_text(size=rel(1.2)),
+              panel.grid.minor=element_line(size=0.1,color='gray70'),
+              panel.grid.major=element_line(size=0.1,color='gray70'),
+              panel.grid.minor.x=element_line(size=0,color='white',linetype=NULL),
+              panel.grid.major.x=element_line(size=0,color='white',linetype=NULL),
+              ## strip.text=element_text(margin=margin(t=1, b=1, unit='lines'),size=15,lineheight=0.5, face='bold',hjust=0.50,vjust=-1))
+              strip.text=element_text(margin=margin(t=1, b=1, r=5, unit='lines'),
+                                      size=0,lineheight=0.5,
+                                      colour = "#004785",
+                                      face='bold',
+                                      family = 'Arial',
+                                      hjust=0.50,vjust=-1))
+    if (include_n)
+        g <- g + geom_text(data=nd1, aes(y=0.50,x=Year, label=N), vjust=1.2)
+    if (same_y_axis_range)
+        g <- g +
+            ##coord_cartesian(ylim = c(0, 0.5), expand = FALSE)
+            scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100, limits = c(0,0.5), expand = c(0,0)) 
+
+
+    ## annotate_npc_abs <- function(label, x, y, ...) 
+    ## {
+    ##     grid::grid.draw(grid::textGrob(
+    ##                               label, x = unit(x, "npc"), y = unit(y, "npc"), ...))
+    ## }
+    ## g<- g + annotate_npc_abs("hello", x = 0.1, y = 0.95)
+    ## annotate_npc <- function(label, x, y, ...)
+    ## {
+    ##     ggplot2::annotation_custom(grid::textGrob(
+    ##                                          x = unit(x, "npc"), y = unit(y, "npc"), label = label, ...))
+    ## } 
+    ## g<- g + coord_cartesian(clip = "off") + annotate_npc("hello", x = 0.1, y = 1.01)
+
+    ## g <- g +
+    ##     annotation_custom(grid::textGrob("Hello", x = unit(0.1, "npc"), y = unit(1, "npc"))) +
+    ##     annotate(geom = "line", x = 2000:2001, y = c(0.4, 0.6))
+    
+    g
+
+    ## Now with the new logo
+    library(magick)
+    library(png)
+    a=magick::image_read(path='../parameters/AIMSLogo_Colour_inline.png') #%>%
+    ## a <- a %>% magick::image_colorize(opacity = 50, color = "white") 
+
+    ## gt2=gt+geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=hues[4],color=NA)+
+    ##     geom_polygon(data=fortify(reg.shp), aes(y=lat, x=long),fill=NA,color='black', size=0.2)  +
+    ##     geom_polygon(fill='white', color=hues[4])
+
+    g <- ggplot_gtable(ggplot_build(g))
+    facets <- grep("strip-t-1-1", g$layout$name)
+    rG <- rasterGrob(a, x=unit(0.85,'npc'), y=unit(0.9, 'npc'), vjust=1,width=unit(0.3,'npc'))
+    tG <- textGrob("Northern Great Barrier Reef",
+                   x = unit(0.05, "npc"),
+                   y = unit(1, "npc"),
+                   vjust = 0.5, hjust = 0,
+                   gp = gpar(fontsize = 15,
+                             fontfamily = "Arial",
+                             col = "#004785"))
+    tG2 <- textGrob("Cape Yolk to Cooktown",
+                   x = unit(0.05, "npc"),
+                   y = unit(0.5, "npc"),
+                   vjust = 0.5, hjust = 0,
+                   gp = gpar(fontsize = 10,
+                             fontfamily = "Arial",
+                             col = "#444040"))
+    ## gt2 <- gt2 + annotation_custom(rasterGrob(a, x=unit(0.85,'npc'), y=unit(0.9, 'npc'), vjust=1,width=unit(0.3,'npc')))
+    ## g1b <- g1 + annotation_custom(rasterGrob(a, x=unit(0.05,'npc'), y=unit(0.3, 'npc'), vjust=1, hjust = 0, width=unit(0.4,'npc')))
+
+    ## gg <- with(g$layout[facets,],
+    ##                     gtable_add_grob(g, list(rG),t=t, l=5, b=b, r=6, name="pic_predator"))
+    ## gg <- with(g$layout[facets,],
+    ##                     gtable_add_grob(gg, list(tG, tG2),t=t, l=5, b=b, r=6, name="pic_predator"))
+    gg <- with(g$layout[facets,],
+                        gtable_add_grob(g, arrangeGrob(rG, tG, tG2, padding = unit(0.01, "line")),t=t, l=5, b=b, r=6, name="pic_predator"))
+    ggsave("a.png", gg, width = 5, height = 3.5, units = 'in')
+
+    ## gg <- with(g$layout[facets,],
+    ##                     gtable_add_grob(g, ggplotGrob(gt2),t=t, l=5, b=b, r=6, name="pic_predator"))
+
+    grid.draw(gg)
+
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.png'),
+           gg, width=5, height=3.5, units='in',dpi=300)
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'),
+           gg, width=5, height=3.5, units='in',dpi=300)
+
+    ## ----end
+}
+## ----end
+
+
 ## ---- Zip
 files <- list.files(path='../output/figures', pattern=paste0('^manta.*_',model_source), full.names=TRUE)
 files1 <- list.files(path='../output/figures', pattern=paste0('^threePanels.*_',model_source,'(.p..|_with.*)'), full.names=TRUE)
