@@ -583,9 +583,9 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
 
     grid.draw(gg)
 
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.png'),
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'2022.png'),
            gg, width=5, height=3.5, units='in',dpi=300)
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'),
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'2022.pdf'),
            gg, width=5, height=3.5, units='in',dpi=300)
     ## ----end
 
@@ -639,9 +639,9 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
 
     grid.draw(gg)
 
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.png'),
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'2022.png'),
            gg, width=5, height=3.5, units='in',dpi=300)
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'.pdf'),
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'2022.pdf'),
            gg, width=5, height=3.5, units='in',dpi=300)
 
     ## ----end
@@ -687,9 +687,9 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
 
     grid.draw(gg)
     
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'_bars.png'),
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'_bars2022.png'),
            gg, width=5, height=3.5, units='in',dpi=300)
-    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'_bars.pdf'),
+    ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',ifelse(include_n,'with_n',''),'_bars2022.pdf'),
            gg, width=5, height=3.5, units='in',dpi=300)
     ## ----end
 }

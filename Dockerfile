@@ -137,6 +137,7 @@ RUN R -e "install.packages('rstanarm'); \
     install.packages('magick'); \ 
     install.packages('oz'); \     
     install.packages('extrafont'); \     
+    install.packages('ggsn'); \     
 "
 
 ## Create project directory in docker image 
