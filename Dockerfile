@@ -122,9 +122,21 @@ RUN apt-get update \
     libmagick++-dev \ 
   && rm -rf /var/lib/apt/lists/* 
 
+# ---------
+# MS CORE FONTS
+# ---------
+# from http://askubuntu.com/a/25614
+RUN echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | debconf-set-selections
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends fontconfig ttf-mscorefonts-installer \
+  && rm -rf /var/lib/apt/lists/* 
+ADD scripts/localfonts.conf /etc/fonts/local.conf
+RUN fc-cache -f -v
+
 RUN R -e "install.packages('rstanarm'); \     
     install.packages('magick'); \ 
     install.packages('oz'); \     
+    install.packages('extrafont'); \     
 "
 
 ## Create project directory in docker image 
