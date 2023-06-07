@@ -2,6 +2,8 @@ source('CoralTrends_functions.R')
 CoralTrends_checkPackages()
 source('CoralTrends_config.R')
 
+library(extrafont)
+
 ## ---- loadData
 ## original model
 ## load(file='../data/modelled/dat.northern_glmer.RData')
@@ -693,7 +695,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
 }
 ## ----end
 
-## ---- 2023 versions
+## ---- 2023 versions with Comms requirements
 dat.northern <- sym(paste0('dat.northern_',model_source))
 dat.central <- sym(paste0('dat.central_',model_source))
 dat.southern <- sym(paste0('dat.southern_',model_source))
@@ -775,18 +777,23 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
     g <- dat %>%
         ggplot(aes(y=response, x=as.numeric(as.character(Year))))+
         geom_blank(aes(y=0.10,x=1995))+geom_blank(aes(y=0.35,x=1995))+
+        ## facet_wrap(~Heading, nrow=1, scales='fixed',
+        ##            labeller=labeller(Location=setNames(paste0("\n", levels(newdata$Region),"\n"), levels(newdata$Region))))+
+        ## facet_wrap(~Heading, nrow=1, scales='fixed',
+        ##            labeller=labeller(Heading='')) + 
         facet_wrap(~Heading, nrow=1, scales='fixed',
-                   labeller=labeller(Location=setNames(paste0("\n", levels(newdata$Region),"\n"), levels(newdata$Region))))+
+                   labeller=label_bquote(rows = "")) + 
         geom_blank()+
         geom_ribbon(aes(ymin=lower, ymax=upper),fill="#9ccbed")+
         geom_line(aes(x=as.numeric(as.character(Year))), color='#004785') +
+        geom_point(colour = "#004785") +
         scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100) +
         scale_x_continuous('',breaks=c(seq(1985,final_year_seq,by=5), final_year), limits=c(1985,final_year))+
         theme_classic(base_family = "Arial", base_size = 12)+
         theme(strip.background=element_rect(fill="white", color='white', size=0.5),
               panel.background=element_rect(color='black'),
               plot.margin = margin(t=2,r=7,b=0,l=0),
-              axis.title.y=element_text(size=rel(1.5), margin=margin(r=0.5,unit='lines')),
+              axis.title.y=element_text(size=rel(1.5), margin=margin(r=0.75,unit='lines')),
               axis.text.x=element_text(size=rel(1.5)),
               axis.text.y=element_text(size=rel(1.5)),
               panel.grid.minor=element_line(size=0.1,color='gray70'),
@@ -794,8 +801,8 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
               panel.grid.minor.x=element_line(size=0,color='white',linetype=NULL),
               panel.grid.major.x=element_line(size=0,color='white',linetype=NULL),
               strip.text=element_text(margin=margin(t=4, b=1, r=5, unit='lines'),
-                                      size=0,lineheight=0.5,
-                                      colour = "#004785",
+                                      size=0, lineheight=0,
+                                      colour = "white",
                                       face='bold',
                                       family = 'Arial',
                                       hjust=0.50,vjust=-1))
@@ -816,7 +823,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
     g <- ggplot_gtable(ggplot_build(g))
     facets <- grep("strip-t-1-1", g$layout$name)
 
-    tG <- textGrob("Northern Great Barrier Reef",
+   tG <- textGrob(headings_lookup %>% filter(Region == region) %>% pull(Heading),
                    x = unit(0, "npc"),
                    y = unit(1, "npc"),
                    vjust = 0, hjust = 0,
@@ -829,7 +836,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
                                               vp = viewport(x = 1, y = -0.5, width = 1,
                                                             just = c("right", "bottom"))),
                                t=t, l=l, b=b, r=l, name="pic_predator1"))
-    tG2 <- textGrob("Cape Yolk to Cooktown",
+    tG2 <- textGrob(headings_lookup %>% filter(Region == region) %>% pull(Subheading),
                    x = unit(0, "npc"),
                    y = unit(1, "npc"),
                    vjust = 0, hjust = 0,
@@ -851,46 +858,126 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
                                t=t, l=l, b=b, r=l, name="pic_predator"))
     ## grid.newpage()
     ## grid.draw(gg)
-    ggsave("a.pdf", gg_with_logo, device = cairo_pdf, width = 801, height = 535, units = 'px', dpi = 85)
-    ggsave("b.pdf", gg_with_logo, device = cairo_pdf, width = 801, height = 535, units = 'px', dpi = 100)
-    ggsave("a.png", gg_with_logo, width = 801, height = 535, units = 'px', dpi = 100)
-
     
     ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
                        ifelse(include_n,'with_n',''), '_withLogo.png'),
            gg_with_logo,
-           device = cairo_pdf,
-           width=801, height=535,
-           units='in',dpi=300)
+           ## device = cairo_pdf,
+           width=801, height=525,
+           units="px",dpi=85)
     ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
                        ifelse(include_n,'with_n',''),'_withLogo.pdf'),
            gg_with_logo,
            device = cairo_pdf,
-           width=801, height=535,
-           units='in', dpi=300)
+           width=801, height=525,
+           units="px", dpi=85)
     
     ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
                        ifelse(include_n,'with_n',''), '_withoutLogo.png'),
            gg,
-           device = cairo_pdf,
-           width=801, height=535,
-           units='in',dpi=300)
+           ## device = cairo_pdf,
+           width=801, height=525,
+           units="px",dpi=85)
     ggsave(file=paste0('../output/figures/manta.',region,'_',model_source,'_',
                        ifelse(include_n,'with_n',''),'_withoutLogo.pdf'),
            gg,
            device = cairo_pdf,
-           width=801, height=535,
-           units='in', dpi=300)
+           width=801, height=525,
+           units="px", dpi=85)
     
     save(gg, gg_with_logo, file = paste0('../output/figures/manta.',region,'_',model_source,'_',
                        ifelse(include_n,'with_n',''),'.RData'))
          
     ## ----end
-    ## ---- three in a line
-
-    ## ----end
-
 }
+## ---- three in a line
+files <- list.files(path = "../output/figures/",
+                    pattern = paste0("manta.*_",model_source,"_.*RData"),
+                    full.names = TRUE)
+gs <- lapply(files, function(x) {
+    load(x)
+    list(gg = gg, gg_with_logo = gg_with_logo)
+    })
+## get the y-axis title from the Northern plot
+ylabb <- gtable_filter(
+    gs[[2]][[1]],
+    "ylab-l",
+    trim=FALSE, invert = FALSE) 
+ylabb$widths[4] <- unit(0, "points")
+ylabb$widths[9] <- unit(0, "points")
+## Now we want to remove the y-axis title from the central and southern figures
+grobs_to_remove <- gs[[1]][[1]]$layout$name[grep("ylab-l", g$layout$name, invert = FALSE)]
+
+gs[[2]][[1]] <- gtable_filter(
+    gs[[2]][[1]],
+    grobs_to_remove,
+    trim=FALSE, invert = TRUE) 
+
+gs[[1]][[1]] <- gtable_filter(
+    gs[[1]][[1]],
+    grobs_to_remove,
+    trim=FALSE, invert = TRUE) 
+
+gs[[3]][[2]] <- gtable_filter(
+    gs[[3]][[2]],
+    grobs_to_remove,
+    trim=FALSE, invert = TRUE)
+## and remove the extra space on the y-axis text left margin
+gs[[2]][[1]]$widths[4] <- unit(0, "points")
+gs[[1]][[1]]$widths[4] <- unit(0, "points")
+gs[[3]][[2]]$widths[4] <- unit(0, "points")
+
+ggsave(file=paste0('../output/figures/manta_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'.pdf'),
+       patchwork::wrap_plots(
+                      patchwork::wrap_elements(ylabb),
+                      patchwork::wrap_elements(gs[[2]][[1]]),
+                      patchwork::wrap_elements(gs[[1]][[1]]),
+                      patchwork::wrap_elements(gs[[3]][[2]]),
+                      nrow = 1,
+                      widths = c(0.02,1,1,1)
+                  ),
+       device = cairo_pdf,
+       width = 2240, height = 525,
+       units = "px", dpi = 85
+       )
+## Individual components
+
+ggsave(file=paste0('../output/figures/manta_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'Northern.pdf'),
+       patchwork::wrap_plots(
+                      patchwork::wrap_elements(ylabb),
+                      patchwork::wrap_elements(gs[[2]][[1]]),
+                      nrow = 1,
+                      widths = c(0.02,1)
+                  ),
+       device = cairo_pdf,
+       width = 801+(801*0.02), height = 525,
+       units = "px", dpi = 85
+       )
+ggsave(file=paste0('../output/figures/manta_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'Central.pdf'),
+       patchwork::wrap_plots(
+                      patchwork::wrap_elements(gs[[1]][[1]]),
+                      nrow = 1,
+                      widths = c(1)
+                  ),
+       device = cairo_pdf,
+       width = 801, height = 525,
+       units = "px", dpi = 85
+       )
+ggsave(file=paste0('../output/figures/manta_',model_source,'_',
+                       ifelse(include_n,'with_n',''),'Southern.pdf'),
+       patchwork::wrap_plots(
+                      patchwork::wrap_elements(gs[[3]][[2]]),
+                      nrow = 1,
+                      widths = c(1)
+                  ),
+       device = cairo_pdf,
+       width = 801, height = 525,
+       units = "px", dpi = 85
+       )
+## ----end
 ## ----end
 
 
