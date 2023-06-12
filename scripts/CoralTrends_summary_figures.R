@@ -791,7 +791,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         scale_x_continuous('',breaks=c(seq(1985,final_year_seq,by=5), final_year), limits=c(1985,final_year))+
         theme_classic(base_family = "Arial", base_size = 12)+
         theme(strip.background=element_rect(fill="white", color='white', size=0.5),
-              panel.background=element_rect(color='black'),
+              ## panel.background=element_rect(color='black'),
               plot.margin = margin(t=2,r=7,b=0,l=0),
               axis.title.y=element_text(size=rel(1.5), margin=margin(r=0.75,unit='lines')),
               axis.text.x=element_text(size=rel(1.5)),
@@ -812,7 +812,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         g <- g +
             scale_y_continuous(expression(Coral~cover~('%')),
                                labels=function(x) x*100,
-                               limits = c(0,0.5),
+                               limits = c(0,0.49),
                                expand = c(0,0)) 
 
     ## Now with the new logo
@@ -833,7 +833,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
                              col = "#004785"))
     gg <- with(g$layout[facets,],
                gtable_add_grob(g, arrangeGrob(tG, padding = unit(0, "line"),
-                                              vp = viewport(x = 1, y = -0.5, width = 1,
+                                              vp = viewport(x = 1, y = -0.4, width = 1,
                                                             just = c("right", "bottom"))),
                                t=t, l=l, b=b, r=l, name="pic_predator1"))
     tG2 <- textGrob(headings_lookup %>% filter(Region == region) %>% pull(Subheading),
@@ -843,7 +843,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
                    gp = gpar(fontsize = 20,
                              fontfamily = "Arial",
                              fontface = "bold",
-                             col = "#444040"))
+                             col = "#989898"))
     gg <- with(g$layout[facets,],
                gtable_add_grob(gg, arrangeGrob(tG2, padding = unit(0, "line"),
                                               vp = viewport(x = 1, y = -0.8, width = 1,
@@ -853,7 +853,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
     rG <- rasterGrob(a, x=unit(0,'npc'), y=unit(0, 'npc'), hjust = 0, vjust=0,width=unit(1,'npc'))
     gg_with_logo <- with(g$layout[facets,],
                gtable_add_grob(gg, arrangeGrob(rG, padding = unit(0, "line"),
-                                              vp = viewport(x = 1, y = 0, width = 0.3,
+                                              vp = viewport(x = 1, y = 0.22, width = 0.3,
                                                             just = c("right", "bottom"))),
                                t=t, l=l, b=b, r=l, name="pic_predator"))
     ## grid.newpage()
