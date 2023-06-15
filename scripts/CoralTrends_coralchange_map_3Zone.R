@@ -215,7 +215,7 @@ if (final_year == 2022) {
 if (final_year == 2023) {
     cotsAndBleaching <- get(load("../data/primary/cots and bleaching for Murray.RData")) %>%
         mutate(Ave_perc_bleach_cat = as.character(Ave_perc_bleach_cat),
-               Ave_perc_bleach_cat = ifelse(Ave_perc_bleach_cat == "0", "0+", Ave_perc_bleach_cat),
+               ## Ave_perc_bleach_cat = ifelse(Ave_perc_bleach_cat == "0", "0+", Ave_perc_bleach_cat),
                `in-water_ sample_date` = in.water_.sample_date)
 }
 ## end 2023 work around--------------
@@ -1695,8 +1695,32 @@ ggsave(filename=paste0('../output/figures/FourPlots3.png'), g1, width=15,height=
 
 ## ---- Multipanel figure (alternative version - the one to use in 2023)
 if (final_year == 2023) {
-    
 makePlot2023 <- function() {
+    ## for 2023, we are going to base Coral Cover and Coral change based
+    ## models run on the LTMP web reporting platform.
+    ## As such, David C. provided Mike an extract from those databases
+    ## and that is what is being used.
+    ## Unfortunately, the ADC have altered the names of the reefs (not
+    ## sure why.  This makes joining awkward. To help with this, I will
+    ## make a lookup to convert between ADC names and REEF_NAMES
+    ## manta.mod <-
+    ##     read_csv("../data/primary/ltm-modelled-data-2023-06-14.csv") %>%
+    ##     rename(REPORT_YEAR = report_year,
+    ##            Cover = median) %>%
+    ##     mutate(REEF_NAME = str_to_upper(domain_name)) %>%
+    ##     mutate(REEF_NAME = str_replace(REEF_NAME, "REEF NO.([0-9])", "REEFS (NO \\1)")) %>%
+    ##     left_join(manta.sum %>%
+    ##               dplyr::select(REEF_NAME, Longitude, Latitude) %>%
+    ##               distinct())
+    manta.mod <- get(load("../data/primary/ltm-modelled-data-from_dashboard_2021_2023.RData")) %>%
+        rename(Latitude = REEF_LAT,
+               Longitude = REEF_LONG,
+               REPORT_YEAR = report_year,
+               Cover = median)
+    manta.mod %>% filter(REPORT_YEAR==final_year) %>% droplevels %>%
+        mutate(cCover = cut(Cover, breaks=c(0,0.1,0.3,0.5,0.75,1), labels=1:5)) %>%
+        write_csv(file='../data/processed/FinalYear_coral_cover_2023.csv')
+
   ## ---- labels
   tops <- management.df %>%
     filter(lat > max(lat)-0.1) %>%
@@ -1707,15 +1731,15 @@ makePlot2023 <- function() {
 
   Zones1 <- c('Survey dates\n(Oct-Dec 2022)',
               'Survey dates\n(Oct 2022 - May 2023)',
-              'Survey dates\n(Aug 2023 - May 2023)')
+              'Survey dates\n(Aug 2022 - May 2023)')
   ## ----end
   ## 1. base plot
   ## ---- base plot
   SurveyDates <-  c('Survey dates\n(Oct-Dec 2022)',
                     'Survey dates\n(Oct 2022 - May 2023)',
-                    'Survey dates\n(Aug 2023 - May 2023)')
+                    'Survey dates\n(Aug 2022 - May 2023)')
   g.base <-
-    manta.sum %>% filter(REPORT_YEAR==final_year) %>%
+    manta.mod %>% filter(REPORT_YEAR==final_year) %>%
     mutate(cCover = cut(Cover, breaks=c(0,0.10,0.30,0.50,0.75,1), labels=1:5)) %>%
     ggplot(, aes(y=Latitude,x=Longitude)) +
     geom_polygon(data=gbr.fort %>% filter(id=='Reef'), aes(y=lat, x=long, group=group),fill='grey', color='grey70') +
@@ -1766,24 +1790,39 @@ makePlot2023 <- function() {
   lgnd.dat.size$lab = format(seq(2.5,12.5,by=2.5),digits=2)
   lgnd.dat.size$size = seq(2.5,12.5,by=2.5)
 
-  rangeLat <- ly %>%
+    ly.mod <-  manta.mod %>%
+        group_by(REEF_NAME) %>%
+        summarize(MaxYr=max(REPORT_YEAR, na.rm=TRUE),
+                  MaxYrCover=Cover[REPORT_YEAR==MaxYr],
+                  MinYr=max(REPORT_YEAR[REPORT_YEAR<MaxYr], na.rm=TRUE),
+                  MinYrCover=Cover[REPORT_YEAR==MinYr],
+                  Longitude=mean(Longitude, na.rm=TRUE),
+                  Latitude=mean(Latitude, na.rm=TRUE)) %>%
+        filter(MinYr>=(final_year-2)) %>%
+        mutate(DiffYr=MaxYr-MinYr,
+               Diff = (MaxYrCover - MinYrCover)/DiffYr,
+               D=Diff<0) %>%
+        right_join(manta.sum.reefs) %>% filter(!is.na(MaxYr))
+    ly.mod %>% write.csv(file='../data/processed/FinalYear_coral_change_2023.csv')
+    
+  rangeLat <- ly.mod %>%
     ungroup %>% 
     summarise(across(Latitude, list(Min = min, Max = max),
                      .names = "{.fn}")) %>%
     mutate(Diff = Max - Min)
-  rangeLong <- ly %>%
+  rangeLong <- ly.mod %>%
     ungroup %>% 
     summarise(across(Longitude, list(Min = min, Max = max),
                      .names = "{.fn}")) %>%
     mutate(Diff = Max - Min)
-  ly1 <- ly %>%
+  ly1 <- ly.mod %>%
     ungroup() %>% 
     mutate(Latitude = scales::rescale(Latitude,
                                       to = c(rangeLat$Max, rangeLat$Max + rangeLat$Diff/2)),
            Longitude = scales::rescale(Longitude,
                                        to = c(rangeLong$Max, rangeLong$Max + rangeLong$Diff/2)))
 
-  g.change = ly %>%
+  g.change = ly.mod %>%
     ggplot(aes(y=Latitude, x=Longitude)) +
     geom_polygon(data=management.df, aes(y=lat, x=long, group=group),fill=NA,color='black', size=0.2) +
     geom_point(aes(y=Latitude,x=Longitude,fill=D, size=abs(Diff*100)),alpha=1,shape=21,color='black', show.legend = TRUE)  +
@@ -1871,7 +1910,7 @@ makePlot2023 <- function() {
                       limits=c(levels(bleaching$CAT))) +
     scale_shape_manual('Survey Date',
                        breaks = c('Before', 'After'),
-                       labels = c('Prior to 1st Jan 2022','Post 1st Jan 2022'),
+                       labels = c('Prior to 1st Jan 2023','Post 1st Jan 2023'),
                        values = c(24,21)) +
     geom_text(data=tops %>% mutate(min=min, max=max, long=min,max), aes(y=lat+0.1, x=long+0.1,label='d) Bleaching - in-water surveys'), vjust=0, hjust=0) +
     scale_x_continuous(expand=c(0,0)) +
@@ -1879,9 +1918,9 @@ makePlot2023 <- function() {
     geom_text(data=lgnd.dat, aes(y=y,x=x+0.5+0.3, label=lab), size=3,hjust=0, parse=FALSE) +
     geom_point(data=lgnd.dat, aes(y=y,x=x+0.5, fill=Cat), shape=21, size=3) +
     annotate(geom = 'point', y = c(-11.5), x = c(145.3), shape = 24, size = 3) +
-    annotate(geom = 'text', y = c(-11.5), x = c(145.6), label = 'Prior to 1st Jan 2022', hjust = 0, size = 3) +
+    annotate(geom = 'text', y = c(-11.5), x = c(145.6), label = 'Prior to 1st Jan 2023', hjust = 0, size = 3) +
     annotate(geom = 'point', y = c(-12.2), x = c(145.3), shape = 21, size = 3) +
-    annotate(geom = 'text', y = c(-12.2), x = c(145.6), label = 'Post 1st Jan 2022', hjust = 0, size = 3) +
+    annotate(geom = 'text', y = c(-12.2), x = c(145.6), label = 'Post 1st Jan 2023', hjust = 0, size = 3) +
     ## geom_point(data = NULL, aes(y = c(-12, -13), x = c(145, 145), shape = c(1, 2))) +
     theme_minimal() +
     theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank())
