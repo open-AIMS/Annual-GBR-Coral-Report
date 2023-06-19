@@ -2010,6 +2010,7 @@ g1 <- makePlot2023()
 bb.ratio <- (bb[3]-bb[1])/(bb[4]-bb[2])
 ggsave(filename=paste0('../output/figures/FourPlots2023.pdf'), g1, width=15,height=15/1.7)
 ggsave(filename=paste0('../output/figures/FourPlots2023.png'), g1, width=15,height=15/1.7, dpi=300)
+}
 ## ----end
 
 
