@@ -1,5 +1,9 @@
 Notes
-
+* 2023
+** Recovery
+*** Northern 2017 - 2022 - annual rate of change
+*** Central 2012 - 2016, 2019 - 2022
+*** Southern 2011 - 2017, 2011 - 2021
 * 2022 (the 2021 update)
 - all scripts up to CoralTrends_summary_figures.R were run on the HPC
   - ssh mlogan@hpc-l001.aims.gov.au
