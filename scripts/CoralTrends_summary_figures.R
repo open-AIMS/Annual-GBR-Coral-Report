@@ -841,7 +841,7 @@ for (region in c('Northern GBR', 'Central GBR', 'Southern GBR')) {
         geom_line(aes(x=as.numeric(as.character(Year))), color='#004785') +
         geom_point(colour = "#004785") +
         scale_y_continuous(expression(Coral~cover~('%')), labels=function(x) x*100) +
-        scale_x_continuous('',breaks=c(seq(1985,final_year_seq,by=5), final_year), limits=c(1985,final_year))+
+        scale_x_continuous('',breaks=c(seq(1985,final_year,by=5), final_year), limits=c(1985,final_year))+
         theme_classic(base_family = "Arial", base_size = 12)+
         theme(strip.background=element_rect(fill="white", color='white', size=0.5),
               ## panel.background=element_rect(color='black'),
@@ -1036,7 +1036,10 @@ ggsave(file=paste0('../output/figures/manta_',model_source,'_',
 
 ## ---- Zip
 files <- list.files(path='../output/figures', pattern=paste0('^manta.*_',model_source), full.names=TRUE)
-files1 <- list.files(path='../output/figures', pattern=paste0('^threePanels.*_',model_source,'(.p..|_with.*)'), full.names=TRUE)
+  files <- files[str_detect(files, ".*_[0-9]{4}\\.p..", negate = TRUE)]
+## files1 <- list.files(path='../output/figures', pattern=paste0('^threePanels.*_',model_source,'(.p..|_with.*)'), full.names=TRUE)
+files1 <- list.files(path='../output/figures', pattern=paste0('^threePanels.*_',model_source,'.*'), full.names=TRUE)
+files1 <- files1[str_detect(files1, "\\_[0-9]{4}", negate = TRUE)]
 files2 <- list.files(path='../data/modelled', pattern=paste0('^modelled_',model_source), full.names=TRUE)
 files = c(files, files1, files2)
 ## files2 <- list.files(path='../output/figures', pattern=paste0('^threePanels.Bars.*_',model_source), full.names=TRUE)

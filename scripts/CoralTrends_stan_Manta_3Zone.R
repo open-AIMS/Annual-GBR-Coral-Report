@@ -43,8 +43,8 @@ models <- c(
 )
 zone <- c(
     ## 'northern'#,
-    #'central'#,
-    'southern'
+    'central'#,
+    ## 'southern'
 )
 COMPARE_MODELS <- FALSE
 ## Fit stan models===================================================================

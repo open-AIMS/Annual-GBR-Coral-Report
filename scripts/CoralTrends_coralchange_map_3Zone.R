@@ -219,6 +219,15 @@ if (final_year == 2023) {
                `in-water_ sample_date` = in.water_.sample_date)
 }
 ## end 2023 work around--------------
+if (final_year == 2024) {
+    cotsAndBleaching <- read_csv("../data/primary/202324_LTMP_Annual_report_bleaching_COTS 1.csv") %>%
+        mutate(Ave_perc_bleach_cat = as.character(ltmp_bleach_cat),
+               ## Ave_perc_bleach_cat = ifelse(Ave_perc_bleach_cat == "0", "0+", Ave_perc_bleach_cat),
+               ## `in-water_ sample_date` = in.water_.sample_date)
+               Aerial_bleaching = as.character(aerial_bleach),
+               Aerial_date = as.Date(aerial_date, format = "%d/%m/%Y"))
+  
+}
 glimpse(cotsAndBleaching)
 ## ----end
 
@@ -235,19 +244,21 @@ cots <- cotsAndBleaching %>%
            AvgOfMEAN_COTS==0 ~ 'No COTS',
            AvgOfMEAN_COTS>0 & AvgOfMEAN_COTS<0.1  ~ 'No Outbreak',
            AvgOfMEAN_COTS>=0.1 & AvgOfMEAN_COTS<0.22 ~ 'Outbreak Watch',
-           AvgOfMEAN_COTS>=0.22 & AvgOfMEAN_COTS<=1 ~ 'Incipient Outbreak',
-           AvgOfMEAN_COTS>1 ~ 'Active Outbreak',
+           AvgOfMEAN_COTS>=0.22 & AvgOfMEAN_COTS<=1 ~ 'Established Outbreak', #'Incipient Outbreak',
+           AvgOfMEAN_COTS>1 ~ 'Severe Outbreak', #'Active Outbreak',
            STATUS=='RE' ~ 'Recovering'
          )
          ) %>%
   mutate(OUTBREAK.CAT = ifelse(OUTBREAK.CAT=='Outbreak watch', 'Outbreak Watch', OUTBREAK.CAT),
          ## OUTBREAK.CAT = ifelse(REEF_NAME=='WADE REEF', 'Outbreak Watch', OUTBREAK.CAT),
-         OUTBREAK.CAT = factor(OUTBREAK.CAT, levels=c('No COTS', 'No Outbreak','Outbreak Watch', 'Recovering', 'Incipient Outbreak', 'Active Outbreak')))
+         ## OUTBREAK.CAT = factor(OUTBREAK.CAT, levels=c('No COTS', 'No Outbreak','Outbreak Watch', 'Recovering', 'Incipient Outbreak', 'Active Outbreak')))
+         OUTBREAK.CAT = factor(OUTBREAK.CAT, levels=c('No COTS', 'No Outbreak','Outbreak Watch', 'Recovering', 'Established Outbreak', 'Severe Outbreak')))
 ## Actually, it turns out that 'Outbreak Watch' should be 'Potential Outbreak'
 cots = cots %>%
   mutate(OUTBREAK.CAT = as.character(OUTBREAK.CAT),
          OUTBREAK.CAT = ifelse(OUTBREAK.CAT=='Outbreak Watch', 'Potential Outbreak', OUTBREAK.CAT),
-         OUTBREAK.CAT = factor(OUTBREAK.CAT, levels=c('No COTS', 'No Outbreak','Potential Outbreak', 'Recovering', 'Incipient Outbreak', 'Active Outbreak')))
+         ## OUTBREAK.CAT = factor(OUTBREAK.CAT, levels=c('No COTS', 'No Outbreak','Potential Outbreak', 'Recovering', 'Incipient Outbreak', 'Active Outbreak')))
+         OUTBREAK.CAT = factor(OUTBREAK.CAT, levels=c('No COTS', 'No Outbreak','Potential Outbreak', 'Recovering', 'Established Outbreak', 'Severe Outbreak')))
 ## ----end
 
 ## ---- COTS map
@@ -1129,7 +1140,7 @@ if (final_year < 2023) {
     ## At the moment, this is specific to 2021/2022 sampling season.  In future, it will need to be adjusted.
     ## Ideally, it should be agnostic to year, I just dont know where the other bookend is.
     bleaching <- bleaching %>%
-        mutate(Date = as.Date(`in-water_ sample_date`, format = "%d-%b-%y"),
+        mutate(Date = as.Date(`in-water_sample_date`, format = "%d-%b-%y"),
                cDate = ifelse(Date> as.Date("2022-01-01"), "After", "Before"),
                cDate = factor(cDate, levels = c('Before', 'After')) )
     levels(bleaching$CAT) <-  c('0%', '>0% - 10%', '>10% - 30%', '>30% - 60%', '>60%') 
@@ -1242,7 +1253,7 @@ if (final_year < 2023) {
     gClip <- function(shp, bb, type='Intersection'){
         require(raster)
         require(rgeos)
-        if(class(bb) == "matrix") b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
+        if(any(class(bb) == "matrix")) b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
         else b_poly <- as(extent(bb), "SpatialPolygons")
         if(type=='Intersection') return(gIntersection(shp, b_poly, byid = T))
         if(type=='Difference') return(gDifference(b_poly,shp, byid = T))
@@ -1626,7 +1637,7 @@ if (final_year == 2022) {
     gClip <- function(shp, bb, type='Intersection'){
         require(raster)
         require(rgeos)
-        if(class(bb) == "matrix") b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
+        if(any(class(bb) == "matrix")) b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
         else b_poly <- as(extent(bb), "SpatialPolygons")
         if(type=='Intersection') return(gIntersection(shp, b_poly, byid = T))
         if(type=='Difference') return(gDifference(b_poly,shp, byid = T))
@@ -1888,7 +1899,7 @@ makePlot2023 <- function() {
   ## ----end
   ## ---- Bleaching
   bleaching <- bleaching %>%
-    mutate(Date = as.Date(`in-water_ sample_date`, format = "%d-%b-%y"),
+    mutate(Date = as.Date(`in-water_sample_date`, format = "%d-%b-%y"),
            cDate = ifelse(Date> as.Date("2023-01-01"), "After", "Before"),
            cDate = factor(cDate, levels = c('Before', 'After')) )
   levels(bleaching$CAT) <-  c('0%', '>0% - 10%', '>10% - 30%', '>30% - 60%', '>60%') 
@@ -1957,7 +1968,7 @@ makePlot2023 <- function() {
   gClip <- function(shp, bb, type='Intersection'){
     require(raster)
     require(rgeos)
-    if(class(bb) == "matrix") b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
+    if(any(class(bb) == "matrix")) b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
     else b_poly <- as(extent(bb), "SpatialPolygons")
     if(type=='Intersection') return(gIntersection(shp, b_poly, byid = T))
     if(type=='Difference') return(gDifference(b_poly,shp, byid = T))
