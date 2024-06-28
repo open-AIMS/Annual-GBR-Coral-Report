@@ -33,7 +33,8 @@ Zones <- c('Northern','Central','Southern')
 trafficLightColors = colorRampPalette(c('#ED1C24','#F47721','#F0C918','#B0D235','#00734D'))
 
 ## Supplied by Mike
-manta.mod <- read_csv("../data/modelled/data-manta-2024.csv") 
+## manta.mod <- read_csv("../data/modelled/data-manta-2024.csv") 
+manta.mod <- read_csv("../data/primary/data-manta-2024.csv") 
 ## The following could be used as a lookup of lat/long incase the conversion I am using below is no good!
 load("../data/primary/reef.lookup.RData")
 ## manta.mod <- manta.mod |>
