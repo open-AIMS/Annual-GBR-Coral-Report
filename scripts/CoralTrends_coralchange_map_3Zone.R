@@ -1,3 +1,4 @@
+library(sf)
 library(ggsn) #map features
 source('CoralTrends_functions.R')
 CoralTrends_checkPackages()
@@ -32,7 +33,23 @@ Zones <- c('Northern','Central','Southern')
 
 trafficLightColors = colorRampPalette(c('#ED1C24','#F47721','#F0C918','#B0D235','#00734D'))
 
-## Supplied by Mike
+## Supplied by running CoralTrends_coralChange.R This script is sort
+## of a reproduction of what takes place in the Dashboard, but
+## provides us with the full model posteriors.
+load(file = "../data/modelled/coral_cover_and_change.RData")
+## lets take this and make it the same as manta.mod (which is what used to be used and is compiled by the data center - hence an awkward format).
+## importantly, we need to put lat/long into this data
+reef_spatial <- manta.sum |>
+  group_by(REEF_NAME) |>
+  summarise(longitude = mean(Longitude), latitude = mean(Latitude)) |>
+  ungroup()
+coral_cover_and_change <-
+  coral_cover_and_change |>
+  left_join(reef_spatial, by = "REEF_NAME")
+
+
+## Supplied by Mike - not going to use this any more...
+## It is being replaced by the data in the coral_cover_and_change data file.
 ## manta.mod <- read_csv("../data/modelled/data-manta-2024.csv") 
 manta.mod <- read_csv("../data/primary/data-manta-2024.csv") 
 ## The following could be used as a lookup of lat/long incase the conversion I am using below is no good!
@@ -82,7 +99,8 @@ trafficLightColors = colorRampPalette(c('#ED1C24','#F47721','#F0C918','#B0D235',
 make_plot_2024 <- function() {
   ## Get the data provided by Mike
   ## manta.mod <- get(load("../data/modelled/ltm-modelled-data-from_dashboard_2021_2023.RData")) |>
-  manta.mod <- manta.mod |> process_manta_mod_data()
+  ## manta.mod <- manta.mod |> process_manta_mod_data()
+  coral_cover_and_change <- coral_cover_and_change |> process_manta_mod_data()
   management_sf <- get_gbr_sf()
   management_df <- get_gbr_df(management_sf)
   tops <- get_gbr_tops(management_df)
@@ -110,13 +128,15 @@ make_plot_2024 <- function() {
   ## SurveyDates <-  c('Survey dates\n(Oct-Dec 2022)',
   ##                   'Survey dates\n(Oct 2022 - May 2023)',
   ##                   'Survey dates\n(Aug 2022 - May 2023)')
+  manta.mod <- coral_cover_and_change
   g.base <- make_base_plot(
-    manta.mod, gbr_sf, qld, management_sf,
+    manta.mod |> filter(variable == "Cover"),
+    gbr_sf, qld, management_sf,
     tops, lgnd.dat, towns12, Zones, SurveyDates,
     extra_width = 23
   )
   ## 2. Coral change
-  g.change <- make_change_plot(manta.mod, management_sf, tops)
+  g.change <- make_change_plot(manta.mod |> filter(variable == "AnnualDiff"), management_sf, tops)
   g <- add_change_to_plot(g = g.base, g.change, management_sf, shiftacross = 5.6)
   ## 3. COTS
   cots <- process_cots(cotsAndBleaching)
@@ -146,8 +166,12 @@ ggsave(filename=paste0('../output/figures/FourPlots_2024.pdf'), g, width=15,heig
 ggsave(filename=paste0('../output/figures/FourPlots_2024.png'), g, width=15,height=15/1.7, dpi = 600)
 ## ggsave(filename=paste0('../output/figures/FourPlots2.png'), g1, width=10,height=6.8, dpi=300)
 
+process_manta_mod_data <- function(coral_cover_and_change) {
+  coral_cover_and_change |> 
+    mutate(Latitude = latitude, Longitude = longitude, Cover = Median)
+}
 
-process_manta_mod_data <- function(manta.mod) {
+process_manta_mod_data_old <- function(manta.mod) {
   manta.mod |> 
     mutate(Latitude = -lat_deg - lat_min/60,
       Longitude = long_deg + long_min/60,
@@ -279,6 +303,90 @@ make_base_plot <- function(manta.mod, gbr_sf, qld, management_sf, tops,
 
 ## ---- Change plot
 make_change_plot <- function(manta.mod, management_sf, tops) {
+  strt = c(145.9,-14.5)
+  manta_mod_reefs <- manta.mod |>
+    ungroup() |> 
+    filter(REPORT_YEAR == final_year) |>
+    distinct() |>
+    dplyr::select(REEF_NAME)
+  lgnd.dat = data.frame(
+    x = c(145.2, 145.2),
+    y = c(-12, -12.7)
+  ) # ff(strt,coefs,length=2)
+  lgnd.dat$lab = c("Increase","Decrease")
+  lgnd.dat$Cat = factor(c(FALSE,TRUE))
+  ## lgnd.dat.size = ff(lgnd.dat[2,1:2],coefs,length=5)
+  lgnd.dat.size = ff(c(coefs[1] + ((strt[2]+0.7)*coefs[2]), (strt[2]+0.7)),coefs,length=5)
+  lgnd.dat.size$lab = format(seq(2.5,12.5,by=2.5),digits=2)
+  lgnd.dat.size$size = seq(2.5,12.5,by=2.5)
+
+  ## ly.mod <- manta.mod |>
+  ##   group_by(REEF_NAME) |>
+  ##   summarize(MaxYr=max(REPORT_YEAR, na.rm=TRUE),
+  ##     MaxYrCover=Cover[REPORT_YEAR==MaxYr],
+  ##     MinYr=max(REPORT_YEAR[REPORT_YEAR<MaxYr], na.rm=TRUE),
+  ##     MinYrCover=Cover[REPORT_YEAR==MinYr],
+  ##     Longitude=mean(Longitude, na.rm=TRUE),
+  ##     Latitude=mean(Latitude, na.rm=TRUE)) |>
+  ##   filter(MinYr>=(final_year-2)) |>
+  ##   mutate(DiffYr=MaxYr-MinYr,
+  ##     Diff = (MaxYrCover - MinYrCover)/DiffYr,
+  ##     D=Diff<0) |>
+  ##   right_join(manta_mod_reefs) |> filter(!is.na(MaxYr))
+  ly.mod <- manta.mod |>
+    mutate(
+      Diff = Median,
+      D = Diff < 0
+    ) |> 
+    right_join(manta_mod_reefs) |>
+    filter(!is.na(REPORT_YEAR))
+  ly.mod |> write.csv(file='../data/processed/FinalYear_coral_change_2023.csv')
+    
+  rangeLat <- ly.mod |>
+    ungroup() |> 
+    summarise(across(Latitude, list(Min = min, Max = max),
+                     .names = "{.fn}")) |>
+    mutate(Diff = Max - Min)
+  rangeLong <- ly.mod |>
+    ungroup() |> 
+    summarise(across(Longitude, list(Min = min, Max = max),
+                     .names = "{.fn}")) |>
+    mutate(Diff = Max - Min)
+  ly1 <- ly.mod |>
+    ungroup() |> 
+    mutate(Latitude = scales::rescale(Latitude,
+                                      to = c(rangeLat$Max, rangeLat$Max + rangeLat$Diff/2)),
+           Longitude = scales::rescale(Longitude,
+                                       to = c(rangeLong$Max, rangeLong$Max + rangeLong$Diff/2)))
+
+  g.change <-
+    ly.mod |>
+    ggplot(aes(y = Latitude, x = Longitude)) +
+    geom_sf(data = management_sf, fill = NA, colour = "black", size = 0.2, inherit.aes = FALSE) +
+    geom_point(aes(y = Latitude,x = Longitude,fill = D, size = abs(Diff*100)),
+      alpha = 1,shape = 21,color = 'black', show.legend  =  TRUE)  +
+    scale_fill_manual('Change', breaks = c(FALSE,TRUE), labels = c('Increase','Decrease'),
+      values = c('green','red'),limits = c(FALSE,TRUE)) +
+    geom_text(data = tops |> mutate(min = min, max = max, long = min,max),
+      aes(y = lat+0.1, x = long+0.1,label = 'b) Coral change'), vjust = 0, hjust = 0) +
+    scale_x_continuous(expand = c(0,0)) +
+    geom_point(data = lgnd.dat, aes(y = y,x = x+0.3, fill = Cat),
+      shape = 21, size = 3) +
+    geom_text(data = lgnd.dat, aes(y = y,x = x+0.3+0.3, label = lab),
+      size = 3,hjust = 0, parse = TRUE) +
+    geom_point(data = lgnd.dat, aes(y = y,x = x+0.3, fill = Cat),
+      shape = 21, size = 3) +
+    geom_point(data = lgnd.dat.size, aes(y = y,x = x+0.4, size = size),
+      shape = 21) +
+    geom_text(data = lgnd.dat.size, aes(y = y,x = x+0.4+0.4, label = lab),
+      size = 3,hjust = 0, parse = TRUE) +
+    theme_minimal() +
+    theme(panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank())    +
+    scale_radius()
+  g.change
+}
+make_change_plot_old <- function(manta.mod, management_sf, tops) {
   manta_mod_reefs <- manta.mod |>
     ungroup() |> 
     filter(REPORT_YEAR == final_year) |>
