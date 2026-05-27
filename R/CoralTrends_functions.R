@@ -100,6 +100,34 @@ CoralTrends_parse_args <- function(args) {
       append = TRUE)
     assign("path", path, envir = .GlobalEnv)
   } else stop("no --path= component provided")
+
+  has_refit_argument <- any(grepl("--refit=.*", args, perl = TRUE))
+  if(has_refit_argument) {
+    arg <- args[grep("--refit=.*", args)]
+    refit <- gsub("--refit=(.)", "\\1", arg)
+    refit <- ifelse(refit == "TRUE", TRUE, FALSE)
+    cat(paste0("\t- refit: ", refit, " class:", class(refit)), "\n",
+      append = TRUE)
+    assign("refit", refit, envir = .GlobalEnv)
+  } else stop("no --refit= component provided")
+
+  has_final_year_argument <- any(grepl("--final_year=.*", args, perl = TRUE))
+  if(has_final_year_argument) {
+    arg <- args[grep("--final_year=.*", args)]
+    final_year <- as.numeric(as.character(gsub("--final_year=(.)", "\\1", arg)))
+    cat(paste0("\t- final_year: ", final_year), "\n",
+      append = TRUE)
+    assign("final_year", final_year, envir = .GlobalEnv)
+  } else stop("no --final_year= component provided")
+
+  has_sql_path_argument <- any(grepl("--sql_path=.*", args, perl = TRUE))
+  if(has_sql_path_argument) {
+    arg <- args[grep("--sql_path=.*", args)]
+    sql_path <- gsub("--sql_path=(.)", "\\1", arg)
+    cat(paste0("\t- sql_path: ", sql_path), "\n",
+      append = TRUE)
+    assign("sql_path", sql_path, envir = .GlobalEnv)
+  }
 }
 
 #########################################################################
@@ -250,4 +278,21 @@ CoralTrends_calc3ZoneLocation <- function(dat) {
     cbind(Longitude = sf::st_coordinates(.)[,1],
       Latitude = sf::st_coordinates(.)[,2]) |>
     sf::st_drop_geometry()
+}
+
+CoralTrends_get_aims_logo <- function(wch = "AIMS") {
+  if (wch == "AIMS") {
+    img <- magick::image_read(
+      path = "../parameters/ECM_1280945_v1_AIMS Logo Stacked white 1200px (2).png"
+    )
+  } else if (wch == "AIMS stacked") {
+    img <- magick::image_read(
+      path = "../parameters/ECM_1280725_v1_AIMS Logo - stacked.jpg"
+    )
+  } else {
+    img <- magick::image_read(
+      path = "../parameters/AIMSLogo_Colour_inline.png"
+    )
+  }
+  return(img)
 }

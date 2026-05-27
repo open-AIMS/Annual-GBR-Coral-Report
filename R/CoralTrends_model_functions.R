@@ -1,6 +1,6 @@
 CoralTrends_prepare_tow_level_data <- function(data, manta_tow) {
   manta_tow <- manta_tow |>
-    filter(Region == domain) |>
+    ## filter(Region == domain) |>
     droplevels() |>
     mutate(oLIVE_CORAL = factor(LIVE_CORAL,
       levels = c('0','1L','1','1U','2L','2','2U','3L','3','3U','4L','4','4U','5L','5','5U'),
@@ -49,24 +49,32 @@ CoralTrends_model_priors <- function(data) {
 
 CoralTrends_fit_model <- function(data) {
   data <- data |>
-    mutate(mod = pmap(.l = c(data, list(form), list(priors), label),
+    mutate(mod = pmap(.l = c(data_group, list(form), list(priors), label),
       .f = ~ {
-        manta_tow <- ..1
+        manta_tow <- readRDS(..1)
         form <- ..2
         ## environment(form) <- environment()  ## not needed for brms
         priors <- ..3
         label <- ..4
-        ## PUT THIS BACK
-        ## mod <- brm(form,
-        ##   data = manta_tow,
-        ##   iter = 1e4,
-        ##   warmup = 5e3,
-        ##   thin = 5,
-        ##   chains = 4, cores = 4,
-        ##   control = list(adapt_delta = 0.95)
-        ## )
         fname <- paste0(data_path, "modelled/", label, ".rds")
-        ## saveRDS(mod, file = fname)
+        if (refit) {
+          ## cat("form: ", form,  "\n\n\n", append = TRUE)
+          ## cat("manta_tow", capture.output(print(manta_tow)), "\n", sep = "n", append=TRUE)
+          ## cat("manta_tow", capture.output(nrow(manta_tow)), "\n", sep = "n")
+          ## cat("manta_tow:", class(manta_tow), "\n\n\n", append = TRUE)
+          mod <- brm(form,
+            data = manta_tow,
+            iter = 1e4,
+            warmup = 5e3,
+            thin = 5,
+            chains = 4, cores = 4,
+            control = list(adapt_delta = 0.95)
+          )
+          saveRDS(mod, file = fname)
+        } else {
+          cat(paste0("\t - Skipped refitting (user specified)\n"),
+            append = TRUE)
+        }
         fname
       }
     ))

@@ -1,3 +1,27 @@
+## To run interactively (for debugging)
+## module load singularity
+## singularity exec -B /export/project/monitoring-dashboard/Annual-GBR-Coral-Report:/home/Project -B /etc/localtime:/etc/localtime -B /etc/timezone:/etc/timezone -B /export/project/monitoring-dashboard/data:/data -B /export/project/monitoring-dashboard/output:/output --pwd /home/Project/R annual_report.sif R
+## setwd("/export/project/monitoring-dashboard/Annual-GBR-Coral-Report/")
+## Fake the args
+if (1 == 2) { #for debugging only
+  args <- c("--data_path=/data/",
+    "--output_path=/output/",
+    "--path=/data",
+    "--path='/data/annual_report/2021-01-14/process/ALL/2024/Northern GBR/Regions/Northern GBR/raw/reef_data.csv'",
+    "--method=annual_report",
+    "--domain=Northern GBR",
+    "--scale=region",
+    "--refit=TRUE"
+  )
+  args <- c("--data_path=/data/",
+    "--output_path=/output/",
+    "--path='/data/annual_report/2021-01-14/process/ALL/2024/GBR/Regions/GBR/raw/reef_data.csv'",
+    "--method=annual_report",
+    "--domain=GBR",
+    "--scale=region",
+    "--refit=TRUE"
+  )
+}
 setwd("../R")
 
 args <- commandArgs()
@@ -71,6 +95,14 @@ source('CoralTrends_processData_Manta_3Zone.R')
 ###############################
 source('CoralTrends_stan_Manta_3Zone.R')
 
+######################################################################
+## Generate single panel coral cover trend plot                     ##
+## ggplot object is stored in:                                      ##
+## - data/modelled/gg_data_domain_COVER_beta_ _ _ _Cover.rds        ##
+## ggplot figure is stored in:                                      ##
+## - data/modelled/gg_fig_domain_COVER_beta_ _ _ _Cover.png         ##
+######################################################################
+source('CoralTrends_trend_Manta_3Zone.R')
 
 
 
