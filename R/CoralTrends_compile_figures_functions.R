@@ -8,7 +8,8 @@
 #######################################################################
 CoralTrends_get_raw_data_via_db_and_file <- function() {
   data <- get_candidates(tab_name = "not_needed", data_type = "manta", scale = "reef") |>
-    filter(selected_flag == 1) |>
+    ## filter(selected_flag == 1) |>
+    filter(selected_flag == TRUE | selected_flag == 1) |>
     mutate(nm = paste0(config_$model_path,
       paste(data_type, data_scale, domain_name,
         group,
@@ -42,7 +43,8 @@ CoralTrends_tidy_raw_data <- function(raw_manta) {
     mutate(
       LATITUDE = mean(LATITUDE),
       LONGITUDE = mean(LONGITUDE)
-    )
+    ) |>
+  filter(SECTOR != "TS")
   return(raw_manta)
 }
 
@@ -86,7 +88,7 @@ find_common_pattern <- function(strings) {
 #######################################################################
 CoralTrends_get_annual_data_via_db_and_file <- function(type = "year_sum") {
   data <- get_candidates(tab_name = "not_needed", data_type = "manta", scale = "reef") |>
-    filter(selected_flag == 1) |>
+    filter(selected_flag == TRUE | selected_flag == 1) |>
     mutate(nm = paste0(config_$model_path,
       paste(data_type, data_scale, domain_name,
         group,
@@ -121,7 +123,8 @@ CoralTrends_tidy_annual_manta_data <- function(annual_data,
     dplyr::select(-shelf)
   if (type == "year_sum") {
     annual_manta <- annual_manta |>
-      left_join(raw_manta |>
+      ## left_join(raw_manta |>
+      inner_join(raw_manta |>
                   dplyr::select(domain_name = REEF,
                     Latitude = LATITUDE,
                     Longitude = LONGITUDE) |>
@@ -129,7 +132,8 @@ CoralTrends_tidy_annual_manta_data <- function(annual_data,
         by = "domain_name")
   } else {
     annual_manta <- annual_manta |>
-      left_join(
+      ## left_join(
+      inner_join(
         raw_manta |>
           dplyr::select(domain_name = REEF, Latitude = LATITUDE, Longitude = LONGITUDE) |>
           distinct(),

@@ -72,6 +72,7 @@ CoralTrends_fit_model <- function(data) {
           )
           saveRDS(mod, file = fname)
         } else {
+          Sys.setFileTime(fname, Sys.time())
           cat(paste0("\t - Skipped refitting (user specified)\n"),
             append = TRUE)
         }
@@ -154,9 +155,15 @@ CoralTrends_contrast_posteriors <- function(data) {
         posteriors <- ..2
         domain <- ..3
         mod_em_draws <- readRDS(posteriors$year_posteriors)
+        report_year_levels <- mod_em_draws |> ungroup() |>
+          filter(.draw == 1) |> pull(REPORT_YEAR) |> sort() |>
+          rev() |> as.character()
         yearcomp_posteriors <- mod_em_draws |>
           ungroup() |>
           group_by(.draw) |>
+          ## filter(.draw == 1) |>
+          arrange(desc(REPORT_YEAR)) |>
+          mutate(REPORT_YEAR = factor(REPORT_YEAR, levels = report_year_levels)) |>
           ## summarise(
           reframe(
             frac = exp(as.vector(as.vector(log(.value)) %*%
@@ -167,6 +174,7 @@ CoralTrends_contrast_posteriors <- function(data) {
             .groups = "keep"
           ) |>
           dplyr::select(YearComp, .draw, value, frac) |>
+          arrange(desc(YearComp)) |>
           mutate(Region = domain,
             GROUP = "HARD CORAL",
             FAMILY = "beta")
@@ -194,7 +202,8 @@ CoralTrends_contrast_sum <- function(data) {
           ungroup() |>
           group_by(YearComp, Region, GROUP, FAMILY) |>
           mutate(across(c(Pl, Pg), ~ first(.x))) |>
-          ungroup()
+          ungroup() |>
+          arrange(desc(YearComp))
         fname <- paste0(data_path, "modelled/", label,
           "_yearcomp_sum.rds")
         saveRDS(yearcomp_sum, file = fname)
@@ -215,10 +224,11 @@ CoralTrends_all_contrast_posteriors <- function(data) {
         mod_em_draws <- readRDS(posteriors$year_posteriors)
 
         years <- levels(mod_em_draws$REPORT_YEAR)
-        xmat <- emmeans:::tukey.emmc(years)
+        xmat <- emmeans:::tukey.emmc(rev(years))
         yearcomp_posteriors <- mod_em_draws |>
           ungroup() |>
           group_by(.draw) |>
+          arrange(desc(REPORT_YEAR)) |>     #must be used with tukey.emmc(rev(years))
           ## summarise(
           reframe(
             frac = exp(as.vector(as.vector(log(.value)) %*% as.matrix(xmat))),
@@ -246,7 +256,7 @@ CoralTrends_all_contrast_sum <- function(data) {
       .f = ~ {
         label <- ..1
         posteriors <- ..2
-        yearcomp_posteriors <- readRDS(posteriors$yearcomp_posteriors)
+        yearcomp_posteriors <- readRDS(posteriors$all_yearcomp_posteriors)
 
         yearcomp_sum <- yearcomp_posteriors |>
           group_by(YearComp, Region, GROUP, FAMILY) |>
@@ -255,7 +265,8 @@ CoralTrends_all_contrast_sum <- function(data) {
           ungroup() |>
           group_by(YearComp, Region, GROUP, FAMILY) |>
           mutate(across(c(Pl, Pg), ~ first(.x))) |>
-          ungroup()
+          ungroup() |>
+          arrange(desc(YearComp))
         fname <- paste0(data_path, "modelled/", label,
           "_all_yearcomp_sum.rds")
         saveRDS(yearcomp_sum, file = fname)
@@ -369,4 +380,88 @@ CoralTrends_partial_plots <- function(data) {
       }
     ))
  return(data)
+}
+
+CoralTrends_longterm_posteriors <- function(data) {
+  data <- data |>
+    mutate(posteriors = pmap(.l = list(label, posteriors, domain),
+      .f = ~ {
+        label <- ..1
+        posteriors <- ..2
+        domain <- ..3
+        mod_em_draws <- readRDS(posteriors$year_posteriors)
+        report_year_levels <- mod_em_draws |> ungroup() |>
+          filter(.draw == 1) |> pull(REPORT_YEAR) |> sort() |>
+          rev() |> as.character()
+        longterm.mat <- matrix(rep(1/length(report_year_levels),
+          length(report_year_levels)),
+          nrow = 1)
+        years <- levels(mod_em_draws$REPORT_YEAR)
+        xmat <- emmeans:::eff.emmc(rev(years))
+        yearcomp_posteriors <- mod_em_draws |>
+          ungroup() |>
+          group_by(.draw) |>
+          ## filter(.draw == 1) |>
+          arrange(desc(REPORT_YEAR)) |>
+          mutate(REPORT_YEAR = factor(REPORT_YEAR, levels = report_year_levels)) |>
+          ## summarise(
+          reframe(
+            longterm = as.vector(.value %*% t(longterm.mat)),
+            frac = exp(as.vector(as.vector(log(.value)) %*% as.matrix(xmat))),
+            value = as.vector(as.vector(.value) %*% as.matrix(xmat)),
+            YearComp = names(xmat),
+
+            ## YearComp = paste0("Longterm", "-", REPORT_YEAR[-1]),
+            .groups = "keep"
+          ) |>
+          dplyr::select(YearComp, .draw, value, frac, longterm) |>
+          arrange(desc(YearComp)) |>
+          mutate(Region = domain,
+            GROUP = "HARD CORAL",
+            FAMILY = "beta")
+        lngtrm <- yearcomp_posteriors |>
+          distinct(.draw, .keep_all = TRUE) |>
+          mutate(YearComp = "Long-term", value = longterm) |>
+          dplyr::select(YearComp, Region, GROUP, FAMILY, .draw, value)
+        longterm_posteriors <- yearcomp_posteriors |>
+          dplyr::select(YearComp, Region, GROUP, FAMILY, .draw, value, frac) |>
+          bind_rows(lngtrm) |>
+          arrange(.draw, desc(YearComp == "Long-term"))
+        fname <- paste0(data_path, "modelled/", label,
+          "_long-term_posteriors.rds")
+        saveRDS(longterm_posteriors, file = fname)
+        posteriors[["longterm_posteriors"]] <- fname
+        posteriors
+      }
+    ))
+  return(data)
+}
+
+CoralTrends_longterm_contrast_sum <- function(data) {
+  data <- data |>
+    mutate(posteriors = pmap(.l = list(label, posteriors),
+      .f = ~ {
+        label <- ..1
+        posteriors <- ..2
+        longterm_posteriors <- readRDS(posteriors$longterm_posteriors)
+
+        longterm_sum <- longterm_posteriors |>
+          group_by(YearComp, Region, GROUP, FAMILY) |>
+          posterior::summarise_draws(median, mean, HDInterval::hdi,
+            Pl = ~ mean(.x < 0), Pg = ~ mean(.x > 0)) |>
+          ungroup() |>
+          group_by(YearComp, Region, GROUP, FAMILY) |>
+          mutate(across(c(Pl, Pg), ~ first(.x))) |>
+          mutate(across(c(Pl, Pg), ~ ifelse(YearComp == "Long-term", NA, .x))) |>
+          ungroup() |>
+          arrange(desc(YearComp == "Long-term"), desc(YearComp)) |>
+          filter(!(YearComp == "Long-term" & variable == "frac"))
+        fname <- paste0(data_path, "modelled/", label,
+          "_longterm_sum.rds")
+        saveRDS(longterm_sum, file = fname)
+        posteriors[["longterm_posteriors"]] <- fname
+        posteriors
+      }
+    ))
+  return(data)
 }

@@ -120,7 +120,7 @@ data <- data |> CoralTrends_cellmeans_sum()
 ## - data are stored in data_path, "modelled/annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ _yearcomp_posteriors.rds")##
 #######################################################################
-cat(paste0("7. get contrast posteriors\n"), #------------------------
+cat(paste0("9. get contrast posteriors\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_contrast_posteriors()
 
@@ -129,7 +129,7 @@ data <- data |> CoralTrends_contrast_posteriors()
 ## - data are stored in data_path, "modelled/annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ _yearcomp_sum.rds")       ##
 #######################################################################
-cat(paste0("8. get contrast summaries\n"), #------------------------
+cat(paste0("10. get contrast summaries\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_contrast_sum()
 
@@ -138,7 +138,7 @@ data <- data |> CoralTrends_contrast_sum()
 ## - data are stored in data_path, "modelled/annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ _all_yearcomp_posteriors.rds")##
 #######################################################################
-cat(paste0("9. get all contrast posteriors\n"), #------------------------
+cat(paste0("11. get all contrast posteriors\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_all_contrast_posteriors()
 
@@ -147,7 +147,7 @@ data <- data |> CoralTrends_all_contrast_posteriors()
 ## - data are stored in data_path, "modelled/annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ _all_yearcomp_sum.rds")       ##
 #######################################################################
-cat(paste0("10. get all contrast summaries\n"), #------------------------
+cat(paste0("12. get all contrast summaries\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_all_contrast_sum()
 
@@ -157,7 +157,7 @@ data <- data |> CoralTrends_all_contrast_sum()
 ## - data are stored in data_path, "modelled/annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ _raw_sums.rds")           ##
 #######################################################################
-cat(paste0("12. generate raw summaries\n"), #------------------------
+cat(paste0("13. generate raw summaries\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_raw_summary()
 
@@ -167,7 +167,7 @@ data <- data |> CoralTrends_raw_summary()
 ## - data are stored in data_path, "figures/gg_raw_sum_annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ .rds")                    ##
 #######################################################################
-cat(paste0("13. generate raw summaries plot\n"), #------------------------
+cat(paste0("14. generate raw summaries plot\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_raw_summary_plots()
 
@@ -176,9 +176,27 @@ data <- data |> CoralTrends_raw_summary_plots()
 ## - data are stored in data_path, "figures/gg_annual_report_region_", ##
 ##       domain, "_COVER_beta_ _ _ _Cover_ .rds")                    ##
 #######################################################################
-cat(paste0("14. generate raw summaries plot\n"), #------------------------
+cat(paste0("15. generate raw summaries plot\n"), #------------------------
   append = TRUE)
 data <- data |> CoralTrends_partial_plots()
+
+#######################################################################
+## Get long-term contrast posteriors                                 ##
+## - data are stored in data_path, "modelled/annual_report_region_", ##
+##       domain, "_COVER_beta_ _ _ _Cover_ _long-term_posteriors.rds")##
+#######################################################################
+cat(paste0("16. get long-term contrast posteriors\n"), #------------------------
+  append = TRUE)
+data <- data |> CoralTrends_longterm_posteriors()
+
+#######################################################################
+## Get contrast longterm summaries                                            ##
+## - data are stored in data_path, "modelled/annual_report_region_", ##
+##       domain, "_COVER_beta_ _ _ _Cover_ _long-term_sum.rds")       ##
+#######################################################################
+cat(paste0("17. get long-term contrast summaries\n"), #------------------------
+  append = TRUE)
+data <- data |> CoralTrends_longterm_contrast_sum()
 
 saveRDS(data, file = paste0(data_path, "modelled/annual_report_region_", domain,
   ".rds"))

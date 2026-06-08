@@ -54,16 +54,38 @@ config_ <- list(
   model_path = "/export/project/monitoring-dashboard/data/modelled/"
   )
 
+## candidates <- get_candidates(tab_name = "not_needed", data_type = "manta", scale = "reef") |>
+##   filter(selected_flag == 1)
+## print(unique(candidates$domain_name))
+
+## candidates <- get_candidates(tab_name = "not_needed", data_type = "manta", scale = "reef") |>
+##   filter(selected_flag == TRUE)
+##   ## filter(domain_name == "Rib Reef") |>
+##   ## filter(selected_flag)
+##   ## pull(selected_flag) |> unique()
+## ## print(as.data.frame(candidates))
+## print(as.data.frame(unique(candidates$domain_name)))
 
 ########################################################
 ## get the raw data compiliation
+## Note, this has filtered to exclude SECTOR of TS
 cat("\n- get the raw data ", "\n")
 raw_manta <- CoralTrends_get_raw_data_via_db_and_file() |>
   CoralTrends_tidy_raw_data()
 
+## print(head(raw_manta))
+
+## print(unique(raw_manta$REEF))
+
+
+
 cat("\n- get the annual estimate summaries data ", "\n")
+## Note, this has filtered to exclude SECTOR of TS
 annual_manta <- CoralTrends_get_annual_data_via_db_and_file(type = "year_sum") |>
   CoralTrends_tidy_annual_manta_data(raw_data, type = "year_sum")
+## print(head(annual_manta))
+## print(unique(annual_manta$domain_name))
+
 
 cat("\n- get the annual contrast estimate summaries data ", "\n")
 annual_yearcomp_manta <- CoralTrends_get_annual_data_via_db_and_file(type = "yearcomp_sum") |>
@@ -74,6 +96,9 @@ coral_cover_and_change <- CoralTrends_combine_cover_and_change(annual_manta,
   annual_yearcomp_manta, final_year = final_year)
 
 cat("\n- coral_cover_and_change",capture.output(print(head(coral_cover_and_change))), "\n", sep = "\n")
+cat("\n- number of reefs in Coral cover",
+  capture.output(print(length(unique(coral_cover_and_change$REEF_NAME)))), "\n", sep = "\n")
+
 
 ## sql_path <- "../data/"
 cat("\n- extract COTS and bleaching", "\n")
@@ -82,6 +107,5 @@ cots_and_bleaching <- CoralTrends_get_cots_and_bleaching()
 
 cat("\n- generate compilation figure", "\n")
 CoralTrends_generate_compilation_figure(coral_cover_and_change, cots_and_bleaching)
-
 
 cat("\nEnd of CoralTrends_compile_figures.R\n=============================================\n")

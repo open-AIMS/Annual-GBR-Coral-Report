@@ -118,7 +118,7 @@ CoralTrends_parse_args <- function(args) {
     cat(paste0("\t- final_year: ", final_year), "\n",
       append = TRUE)
     assign("final_year", final_year, envir = .GlobalEnv)
-  } else stop("no --final_year= component provided")
+  } #else stop("no --final_year= component provided")
 
   has_sql_path_argument <- any(grepl("--sql_path=.*", args, perl = TRUE))
   if(has_sql_path_argument) {
