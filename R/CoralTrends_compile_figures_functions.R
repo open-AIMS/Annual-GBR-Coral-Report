@@ -125,17 +125,19 @@ CoralTrends_tidy_annual_manta_data <- function(annual_data,
     annual_manta <- annual_manta |>
       ## left_join(raw_manta |>
       inner_join(raw_manta |>
-                  dplyr::select(domain_name = REEF,
-                    Latitude = LATITUDE,
-                    Longitude = LONGITUDE) |>
-                  distinct(),
+                   dplyr::select(Region,
+                     domain_name = REEF,
+                     Latitude = LATITUDE,
+                     Longitude = LONGITUDE) |>
+                   distinct(),
         by = "domain_name")
   } else {
     annual_manta <- annual_manta |>
       ## left_join(
       inner_join(
         raw_manta |>
-          dplyr::select(domain_name = REEF, Latitude = LATITUDE, Longitude = LONGITUDE) |>
+          dplyr::select(Region, domain_name = REEF,
+            Latitude = LATITUDE, Longitude = LONGITUDE) |>
           distinct(),
         by = "domain_name"
       ) |>
@@ -175,6 +177,7 @@ CoralTrends_combine_cover_and_change <- function(annual_manta,
     filter(REPORT_YEAR == final_year) %>%
     mutate(variable = "Cover") |>
     dplyr::select(REPORT_YEAR,
+      Region,
       REEF_NAME = domain_name, variable,
       Mean = mean, Median = median, lower, upper, Latitude, Longitude
     ) |>
@@ -183,12 +186,13 @@ CoralTrends_combine_cover_and_change <- function(annual_manta,
         filter(variable == "value") |>
         mutate(variable = "AnnualDiff") |>
         dplyr::select(REPORT_YEAR,
+          Region,
           REEF_NAME = domain_name, variable,
           Mean = Diff, Median = Diff, lower, upper, Latitude, Longitude, D
         )
     ) |>
     mutate(latitude = Latitude, longitude = Longitude) |>
-    arrange(REPORT_YEAR, REEF_NAME, variable)
+    arrange(REPORT_YEAR, Region, REEF_NAME, variable)
   return(coral_cover_and_change)
 }
 
@@ -282,6 +286,7 @@ CoralTrends_get_cots_and_bleaching <- function() {
 
   cots_and_bleaching <-
     cots_and_bleaching |>
+    mutate(SAMPLE_DATE = gsub("Sept", "Sep", SAMPLE_DATE)) |>
     mutate(sample_date = as.POSIXct(SAMPLE_DATE, format = "%d-%b-%Y %H:%M:%S")) |>
     mutate(sample_date = format(sample_date, "%d/%m/%Y")) |>
     group_by(AIMS_REEF_NAME, REEF_LAT, REEF_LONG, REPORT_YEAR) |>

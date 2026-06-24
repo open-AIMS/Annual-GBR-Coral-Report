@@ -5,7 +5,7 @@ cat("The current working directory is: ", getwd(), "\n\n")
 args <- commandArgs()
 
 ## Fake args for testing
-if (length(args) == 1)  { ## clearly being run interactively
+if (length(args) < 3)  { ## clearly being run interactively
   args <- c(
     "--cwd=../../Annual-GBR-Coral-Report/R/",
     "--domain=annual_report",
@@ -94,6 +94,24 @@ annual_yearcomp_manta <- CoralTrends_get_annual_data_via_db_and_file(type = "yea
 cat("\n- combine cover and change", "\n")
 coral_cover_and_change <- CoralTrends_combine_cover_and_change(annual_manta,
   annual_yearcomp_manta, final_year = final_year)
+saveRDS(coral_cover_and_change, file = paste0(data_path, "modelled/coral_cover_and_change.rds"))
+write_csv(coral_cover_and_change, file = paste0(data_path, "modelled/coral_cover_and_change.csv"))
+
+## Compile metadata
+compilations_metadata <- list(
+  run_date = now(),
+  number_of_reefs = coral_cover_and_change |>
+    filter(variable == "Cover") |>
+    group_by(Region) |>
+    count(),
+  change_stats = coral_cover_and_change |>
+    filter(variable == "AnnualDiff") |>
+    group_by(Region, D) |>
+    count()
+)
+saveRDS(compilations_metadata,
+  file = paste0(data_path, "modelled/compilations_metadata.rds"))
+
 
 cat("\n- coral_cover_and_change",capture.output(print(head(coral_cover_and_change))), "\n", sep = "\n")
 cat("\n- number of reefs in Coral cover",
