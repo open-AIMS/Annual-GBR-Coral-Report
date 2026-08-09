@@ -126,4 +126,36 @@ cots_and_bleaching <- CoralTrends_get_cots_and_bleaching()
 cat("\n- generate compilation figure", "\n")
 CoralTrends_generate_compilation_figure(coral_cover_and_change, cots_and_bleaching)
 
+## Now generate the three panel coral trends figures ========================================
+
+## NOTE - this version of the trend plots is run locally (not on the
+## HPC) As a result, I need to duplicate some of the code
+## (unfortunately).  Ideally, I would run this on the HPC, however,
+## Mike needs the figures today and therefore I have to cut a couple
+## of corners.
+
+## get the data for Northern, Central and Southern GBR
+
+source('CoralTrends_trend_functions.R')
+source('CoralTrends_compile_figures_functions.R')
+library(oz)
+library(sf)
+domains <- c("Northern GBR", "Central GBR", "Southern GBR")
+data <- lapply(domains, \(domain)
+  readRDS(file = paste0(data_path, "modelled/annual_report_region_", domain, ".rds"))
+) |>
+  purrr::list_rbind() |>
+  mutate(region = factor(region, levels = domains))
+
+## Make the trend plot
+data <- data |> CoralTrends_generate_three_panel_trends(
+  final_year = NA
+)
+
+## Finalise plot (add banner to trend plot)
+cat(paste0("\t - finalise the plot (add minimap to facet)\n"),
+  append = TRUE)
+data <- data |>
+  CoralTrends_addorn_three_panel_plots()
+
 cat("\nEnd of CoralTrends_compile_figures.R\n=============================================\n")

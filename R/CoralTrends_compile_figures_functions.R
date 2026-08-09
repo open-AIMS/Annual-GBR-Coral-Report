@@ -1043,3 +1043,371 @@ CoralTrends_generate_compilation_figure <- function(coral_cover_and_change, cots
     flags = "-j"
   )
 }
+
+
+
+
+CoralTrends_generate_three_panel_trends <- function(data, final_year = NA) {
+  data <- data |>
+    mutate(region = str_replace(lab, "annual_report_region_", ""))
+  dat <- data |>
+    dplyr::select(region, posteriors) |>
+    mutate(posteriors = map(posteriors,
+      .f = ~ {
+        post <- .x
+        post$year_sum <- str_replace(post$year_sum,"/data/modelled/",
+          "/export/project/monitoring-dashboard/data/modelled/")
+        post$year_posteriors <- str_replace(post$year_posteriors,"/data/modelled/",
+          "/export/project/monitoring-dashboard/data/modelled/")
+        post
+      })) |>
+    mutate(dat = map(posteriors,
+      .f = ~ readRDS(.x$year_sum))) |>
+    unnest(dat)
+
+  n_year <- data |>
+    mutate(data_group = map(data_group,
+      .f = ~ str_replace(.x,"/data/modelled/",
+          "/export/project/monitoring-dashboard/data/modelled/"))) |>
+    mutate(dat = map(data_group,
+      .f = ~ readRDS(.x))) |>
+    unnest(dat) |>
+    dplyr::select(region, REPORT_YEAR, AIMS_REEF_NAME) |>
+    dplyr::distinct() |>
+    dplyr::mutate(REPORT_YEAR = factor(REPORT_YEAR)) |>
+    group_by(region, REPORT_YEAR) |>
+    count()
+
+  if (is.na(final_year)) {
+    final_year <- dat |>
+      mutate(Year = as.numeric(as.character(REPORT_YEAR))) |>
+      pull(Year) |>
+      max()
+  }
+  final_year_seq <- mceiling(final_year,5)
+  headings_lookup <- CoralTrends_get_headings_lookup__()
+
+  uncertainty_lookup <- tribble(
+     ~ribbon, ~ribbon_str, ~description,
+     TRUE,    "ribbon",    "Ribbon uncertainty",
+     FALSE,   "bars",      "Bars uncertainty"
+  )
+  n_lookup <- tribble(
+    ~with_n, ~n_str,      ~description,
+    TRUE,    "with n",    "with n",
+    FALSE,   "without n", "without n"
+  )
+  axis_lookup <- tribble(
+    ~fixed_axis, ~axis_str,      ~description,
+    TRUE,        "fixed y",      "same y axis range",
+    FALSE,       "free y",       "individual y axis range"
+  )
+  layout_lookup <- tribble(
+    ~layout_rows, ~rows_str, ~description,
+    TRUE,  "row",    "Three plots in a row",
+    FALSE, "col",    "Three plots in a column"
+  )
+  theme_lookup <- tribble(
+    ~theme_type, ~theme_str,        ~description,
+    "corporate", "corporate theme", "corporate theme",
+    "minimap",   "minimap theme",   "minimap theme"
+  )
+
+  trend_plots <- uncertainty_lookup |>
+    crossing(n_lookup, .name_repair = "universal") |>
+    crossing(axis_lookup, .name_repair = "universal") |>
+    crossing(theme_lookup, .name_repair = "universal") |>
+    crossing(layout_lookup, .name_repair = "universal") |>
+    unite("description", contains("description"), sep = ", ") |>
+    unite("file_str", ribbon_str, n_str, axis_str, rows_str, theme_str, sep = "_") |>
+    suppressMessages()
+
+  trend_plots <- trend_plots |>
+    mutate(plot = pmap(.l = list(file_str, ribbon, with_n, fixed_axis, layout_rows, theme_type),
+      .f = ~ {
+        file_str <- ..1
+        ribbon <- ..2
+        with_n <- ..3
+        fixed_axis <- ..4
+        layout_rows <- ..5
+        theme_type <- ..6
+        p <-
+          dat |>
+          left_join(headings_lookup, by = "Region") |>
+          dplyr::filter(Heading != "Great Barrier Reef") |>
+          mutate(Heading = factor(Heading,
+            levels = c("Northern Great Barrier Reef",
+              "Central Great Barrier Reef",
+              "Southern Great Barrier Reef"))) |>
+          ggplot(aes(median, x = as.numeric(as.character(REPORT_YEAR))))
+        if (ribbon) {
+          p <- p +
+            geom_ribbon(aes(ymin = lower, ymax = upper), fill = "#9ccbed") +
+            geom_point(colour = "#004785")
+        } else {
+          p <- p +
+            geom_pointrange(aes(ymin = lower, ymax = upper), colour = "#004785")
+        }
+        p <- p +
+          geom_line(color = "#004785") +
+          scale_x_continuous('',
+            breaks = seq(1985, final_year_seq, by = 5),
+            limit = c(1985, final_year)) +
+          theme_classic(base_family = "Arial", base_size = 12)
+           ## theme_classic()
+        if (with_n) {
+          dat1 <- dat |>
+            left_join(headings_lookup, by = "Region") |>
+            dplyr::filter(Heading != "Great Barrier Reef") |>
+            mutate(Heading = factor(Heading,
+              levels = c("Northern Great Barrier Reef",
+                "Central Great Barrier Reef",
+                "Southern Great Barrier Reef"))) |>
+            left_join(n_year, by = c("region", "REPORT_YEAR"))
+          p <- p +
+            ## geom_text(data = dat, aes(y = Inf, label = n), vjust = 1, size = rel(0.5))
+            geom_text(data = dat1,
+              ## aes(y = upper, label = n), vjust = -0.3, size = rel(0.5))
+              aes(y = upper, label = n), vjust = -0.3)
+        }
+        if (fixed_axis) {
+          p <- p +
+            scale_y_continuous(expression(Coral~cover~('%')),
+              labels = function(x) x*100,
+              limits = c(0,0.49),
+              expand = c(0,0))
+        } else {
+          p <- p +
+            scale_y_continuous(expression(Coral~cover~("%")),
+              labels = function(x) x*100)
+        }
+        if (layout_rows) {
+          nrows <- 1
+          ncols <- 3
+          theme_additions <- theme(panel.spacing.x = unit(2, "lines"))
+        } else {
+          nrows <- 3
+          ncols <- 1
+          theme_additions <- theme(panel.spacing.y = unit(1, "lines"))
+        }
+        if (theme_type == "corporate") {
+          p <- p +
+            facet_wrap(~Heading, nrow=nrows, ncol = ncols, scales='fixed',
+              labeller=label_bquote(rows = "")) +
+            corporate_theme + theme_additions
+        } else {
+          p <- p +
+            ## facet_wrap(~Heading, nrow=1, scales='fixed',
+            ##   labeller = labeller(Heading = setNames(paste0("\n", unique(dat$Heading),"\n"), unique(dat$Heading)))) +
+            facet_wrap(~Heading, nrow=nrows, ncol = ncols, scales='fixed') +
+            minimap_theme + theme_additions +
+            theme(strip.text = element_text(margin = margin(t = 3, b = 4, r = 4, unit = "lines"),
+              size = 26, lineheight = 0.5,
+              colour = "black", face = "bold",
+              family = "Arial",
+              hjust = 0.6, vjust = 0.1))
+        }
+        ## p <- p + switch(theme_type,
+        ##   "corporate" = corporate_theme,
+        ##   "minimap" = minimap_theme
+        ## )
+        p
+      }
+    ))
+
+  data <- data |>
+    dplyr::select(VARIABLE, model_type, family_type, model_response,
+      sub_model) |>
+    mutate(
+      lab = "annual_report_region_ALL",
+      label = "annual_report_region_ALL_HC_beta_ _ _ _Cover_",
+      fig_label = "annual_report_region_ALL_HC_ _ _ _Cover_ "
+    ) |>
+    distinct() |>
+    mutate(trend_plot = list(trend_plots))
+  return(data)
+}
+
+## In all likelihood, data here will only have a single row, so the
+## map2 seems a little over the top.  That said, it means it can be
+## expanded to accommodate multi-row datasets
+CoralTrends_addorn_three_panel_plots <- function(data) {
+  data <- data |>
+    mutate(trend_plot = map2(
+      .x = trend_plot,
+      .y = fig_label,
+      .f =  ~ {
+        trend_plot <- .x
+        fig_label <- .y
+        plots <- CoralTrends_addorn_three_panel_trend_plots__(trend_plot, fig_label)
+        return(trend_plot |> mutate(addorned_plot = plots))
+      }))
+  data <- data |>
+    mutate(trend_plot = list(trend_plot))
+  return(data)
+}
+
+
+## The following function divies up the multiple rows to call out
+## the get a single plot per row
+CoralTrends_addorn_three_panel_trend_plots__ <- function(trend_plot, fig_label) {
+  plots <- seq_len(nrow(trend_plot)) |>
+    map(function(i) {
+     CoralTrends_addorn_three_panel_trend_plot__(trend_plot[i, ], fig_label)
+    })
+  return(plots)
+}
+
+trend_plot <- data$trend_plot[[1]]
+trend_plot <- trend_plot[4,]
+fig_label <- data$fig_label[[1]]
+
+## The following function is the workhorse that blends the single trend
+## with the required addornment
+CoralTrends_addorn_three_panel_trend_plot__ <- function(trend_plot, fig_label) {
+  png(file = tempfile(), width = 1, height = 1, type = "cairo")
+  on.exit(dev.off(), add = TRUE)
+  ## need to temporarily move the cwd since ggplot_gtable insists on
+  ## generating a Rplots.pdf and the current user does not have write access
+  ## to this location
+  tem <- getwd()
+  setwd(tempdir())
+  g <- ggplot_gtable(ggplot_build(trend_plot$plot[[1]]))
+  setwd(tem)
+
+  facets <- grep("strip-t-.*", g$layout$name)
+  if (!trend_plot$layout_rows) facets <- rev(facets)
+  regions <- c("Northern GBR", "Central GBR", "Southern GBR")
+  gg <- g
+  for (j in 1:length(facets)) {
+     region <- regions[j]
+     if (trend_plot$theme_type[[1]] == "corporate") {
+       strip_text_grob <- CoralTrends_make_strip_text_grob__(region)
+       strip_subtext_grob <- CoralTrends_make_strip_subtext_grob__(region)
+       ## Incorporate the strip text into the strip of the plot
+       gg <- with(
+         g$layout[facets[j],],
+         gtable_add_grob(gg,
+           arrangeGrob(strip_text_grob, padding = unit(0, "line"),
+             vp = viewport(x = 1, y = -0.4, width = 1,
+               just = c("right", "bottom"))),
+           t=t, l=l, b=b, r=l, name="pic_predator1")
+       )
+       ## Incorporate the strip subtext into the strip of the plot
+       gg <- with(
+         g$layout[facets[j],],
+         gtable_add_grob(gg,
+           arrangeGrob(strip_subtext_grob,
+             padding = unit(0, "line"),
+             vp = viewport(x = 1, y = -0.8,
+               width = 1,
+               just = c("right", "bottom"))),
+           t=t, l=l, b=b, r=l,
+           name="pic_predator2")
+       )
+
+       aims_logo <- CoralTrends_get_aims_logo(wch = "gov")
+       aims_logo_rg <- CoralTrends_logo_to_raster_grob__(aims_logo)
+
+       gg <- with(
+         g$layout[facets[j],],
+         gtable_add_grob(
+           gg,
+           arrangeGrob(aims_logo_rg,
+             padding = unit(0, "line"),
+             vp = viewport(x = 1, y = 0.22,
+               width = 0.3,
+               just = c("right", "bottom"))),
+           t=t, l=l, b=b, r=l,
+           name="pic_predator")
+       )
+     } else {
+       minimap <- CoralTrends_generate_single_banner(region = region)
+       if (j == 1 | !trend_plot$layout_rows) {
+         gg <- with(
+           g$layout[facets[j],],
+           gtable_add_grob(gg,
+             ggplotGrob(minimap),
+             ## t=t, l=4, b=b, r=6, name="pic_predator")
+             t=t, l=7, b=b, r=8, name="pic_predator")
+         )
+       } else if (j == 2 & trend_plot$layout_rows){
+         gg <- with(
+           g$layout[facets[j],],
+           gtable_add_grob(gg,
+             ggplotGrob(minimap),
+             ## t=t, l=4, b=b, r=6, name="pic_predator")
+             t=t, l=11, b=b, r=12, name="pic_predator")
+         )
+       } else if (j == 3 & trend_plot$layout_rows){
+         gg <- with(
+           g$layout[facets[j],],
+           gtable_add_grob(gg,
+             ggplotGrob(minimap),
+             ## t=t, l=4, b=b, r=6, name="pic_predator")
+             t=t, l=15, b=b, r=16, name="pic_predator")
+         )
+       }
+
+       aims_logo <- CoralTrends_get_aims_logo(wch = "AIMS")
+       aims_logo_rg <- CoralTrends_logo_to_raster_grob__(aims_logo)
+       gg <- with(
+         g$layout[facets[j],],
+         gtable_add_grob(
+           gg,
+           arrangeGrob(aims_logo_rg,
+             padding = unit(0, "line"),
+           ##   vp = viewport(x = 1, y = 0.15, #y = 0.22,
+           ##     width = 0.3,
+           ##     just = c("right", "bottom"))),
+           ## t=t, l=l, b=b, r=l,
+             vp = viewport(x = 0.98, y = 0.12, #y = 0.22,
+               width = 0.12,
+               just = c("right", "bottom"))),
+           t=t, l=l, b=b, r=l,
+           name="pic_predator")
+       )
+     }
+
+  }
+  plot <- gg
+
+  if (trend_plot$layout_rows) {
+    gheight <- 525*1
+    gwidth <- 801*3
+  } else {
+    gheight <- 525*3
+    gwidth <- 801*1
+  }
+
+  ## fname <- paste0(fig_label, trend_plot$file_str, ".png")
+  fname <- paste0("/export/project/monitoring-dashboard",
+    fig_path, "gg_fig_", fig_label,
+    trend_plot$file_str[[1]],
+    ".png")
+
+  ggsave(file = fname,
+    plot,
+    width = gwidth,
+    height = gheight,
+    units = "px",
+    dpi = 85
+  )
+  ggsave(file = gsub(".png", "hires.png", fname),
+    plot,
+    width = gwidth * (600/85),
+    height = gheight * (600/85),
+    units = "px",
+    dpi = 600
+  )
+  ggsave(file = gsub(".png", ".pdf", fname),
+    plot,
+    device = cairo_pdf,
+    width = gwidth,
+    height = gheight,
+    units = "px",
+    dpi = 85
+  )
+  ## place marker for saving plot
+  return(fname)
+}
